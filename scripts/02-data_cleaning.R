@@ -8,37 +8,120 @@
 # Any other information needed? [...UPDATE THIS...]
 
 #### Workspace setup ####
+library(dplyr)
+library(stringr)
 library(tidyverse)
+library(janitor)
+library(tools)
 
 #### Clean data ####
-raw_data <- read_csv("inputs/data/plane_data.csv")
+# Import all the raw data
+DP02 <- read.csv("inputs/data/DP_02.csv")
+DP03 <- read.csv("inputs/data/DP_03.csv")
+DP05 <- read.csv("inputs/data/DP_05.csv")
+covid_data <- read.csv("inputs/data/covid_data.csv")
+election_data <- read.csv("inputs/data/countypres_2000-2020.csv")
 
-cleaned_data <-
-  raw_data |>
-  janitor::clean_names() |>
-  select(wing_width_mm, wing_length_mm, flying_time_sec_first_timer) |>
-  filter(wing_width_mm != "caw") |>
-  mutate(
-    flying_time_sec_first_timer = if_else(flying_time_sec_first_timer == "1,35",
-                                   "1.35",
-                                   flying_time_sec_first_timer)
-  ) |>
-  mutate(wing_width_mm = if_else(wing_width_mm == "490",
-                                 "49",
-                                 wing_width_mm)) |>
-  mutate(wing_width_mm = if_else(wing_width_mm == "6",
-                                 "60",
-                                 wing_width_mm)) |>
-  mutate(
-    wing_width_mm = as.numeric(wing_width_mm),
-    wing_length_mm = as.numeric(wing_length_mm),
-    flying_time_sec_first_timer = as.numeric(flying_time_sec_first_timer)
-  ) |>
-  rename(flying_time = flying_time_sec_first_timer,
-         width = wing_width_mm,
-         length = wing_length_mm
-         ) |> 
-  tidyr::drop_na()
+get_state_abbreviation <- function(state_names) {
+  sapply(state_names, function(state_name) {
+    state_data <- state.abb[match(state_name, state.name)]
+    if (!is.na(state_data)) {
+      return(state_data)
+    } else {
+      return(NA)  # changed from NULL to NA for consistency in a vector
+    }
+  })
+}
 
-#### Save data ####
-write_csv(cleaned_data, "outputs/data/analysis_data.csv")
+# Extract the county name from a 'County, State' formatted string.
+extract_county <- function(name) {
+  if (!is.na(name) && str_detect(name, ",")) {
+    return(str_replace(str_split(name, ",")[[1]][1], " County", ""))
+  } 
+  else if (!is.na(name)) {
+    return(str_replace(str_split(name, " ")[[1]][1], " County", ""))
+  }
+  else {
+    return(NA)
+  }
+}
+
+# Extract the state abbreviation from a 'County, State' formatted string.
+extract_state <- function(name) {
+  if (!is.na(name) && str_detect(name, ",")) {
+    return(get_state_abbreviation(str_trim(str_split(name, ",")[[1]][2])))
+  } else {
+    return(NA)
+  }
+}
+
+extract_fips <- function(code) {
+  extracted <- sub(".*US", "", code)
+  extracted <- as.numeric(extracted)
+  return(extracted)
+}
+
+# Clean and rename columns in a DataFrame.
+data_cleaning <- function(df, rename_dict) {
+  df$county <- sapply(df$NAME, extract_county)
+  df$state <- sapply(df$NAME, extract_state)
+  df$fips <- extract_fips(df$GEO_ID)
+  columns_to_select <- c("county", "state", "fips", names(rename_dict))
+  selected_df <- df[, columns_to_select, drop = FALSE]
+  colnames(selected_df) <- c("county", "state", "fips", rename_dict)
+  selected_df <- na.omit(selected_df)
+  # selected_df$state <- unlist(selected_df$state)
+  return(selected_df %>% arrange(fips))
+}
+
+dict_02 <- c("DP02_0068PE" = "prop_higher_education")
+dict_03 <- c("DP03_0063E" = "mean_household_income",
+             "DP03_0097PE" = "private_insurance",
+             "DP03_0099PE" = "no_insurance")
+dict_05 <- c("DP05_0001PE" = "total_population",
+             "DP05_0002PE" = "males",
+             "DP05_0017PE" = "old_85",
+             "DP05_0037PE" = "white_pct",
+             "DP05_0038PE" = "black_pct")
+
+# Clean all the ACS raw data
+DP02_clean <- data_cleaning(DP02, dict_02)
+DP03_clean <- data_cleaning(DP03, dict_03)
+DP05_clean <- data_cleaning(DP05, dict_05)
+
+# Clean the covid data
+covid_data_clean <- covid_data %>% 
+  filter(Country_Region == "US") %>% 
+  select(FIPS, Admin2, Province_State, Confirmed, Deaths) %>% 
+  rename(`county` = Admin2,
+         `state` = Province_State,
+         `cases` = Confirmed) %>%
+  mutate(state = get_state_abbreviation(state)) %>% 
+  clean_names() 
+  # mutate(county = if_else(state == "LA", paste0(county, " Parish"), county))
+covid_data_clean <- na.omit(covid_data_clean)
+
+# Clean the election data
+election_data_clean <- election_data %>% 
+  filter(year == 2020,
+         ! (party == "OTHER")) %>% 
+  mutate(county = str_to_title(county_name),
+         party = str_to_title(party),
+         state = state_po,
+         votes = candidatevotes,
+         total_votes = totalvotes, 
+         fips = county_fips) %>%
+  select(state_po, county, fips, candidate, party, votes, total_votes)
+
+# Merge the data
+merged_acs <- DP02_clean %>%
+  inner_join(DP03_clean, by = c("state", "county", "fips")) %>%
+  inner_join(DP05_clean, by = c("state", "county", "fips"))
+
+merged_covid_election <- covid_data_clean %>% 
+  inner_join(election_data_clean, by = "fips") %>% 
+  mutate(county = county.x) %>% 
+  select(state, county, fips, cases, deaths, party, votes, total_votes)
+
+merged_data <- merged_acs %>% 
+  inner_join(merged_covid_election, by = c("fips", "state"))
