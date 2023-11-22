@@ -110,18 +110,27 @@ election_data_clean <- election_data %>%
          state = state_po,
          votes = candidatevotes,
          total_votes = totalvotes, 
-         fips = county_fips) %>%
-  select(state_po, county, fips, candidate, party, votes, total_votes)
+         fips = county_fips,
+         pct_vote = votes/total_votes) %>%
+  select(state_po, county, fips, candidate, party, votes, total_votes, pct_vote)
 
 # Merge the data
 merged_acs <- DP02_clean %>%
   inner_join(DP03_clean, by = c("state", "county", "fips")) %>%
-  inner_join(DP05_clean, by = c("state", "county", "fips"))
+  inner_join(DP05_clean, by = c("state", "county", "fips")) %>% 
+  mutate(pctile = ntile(mean_household_income, 100))
 
 merged_covid_election <- covid_data_clean %>% 
   inner_join(election_data_clean, by = "fips") %>% 
   mutate(county = county.x) %>% 
-  select(state, county, fips, cases, deaths, party, votes, total_votes)
+  select(state, county, fips, cases, deaths, party, votes, total_votes, pct_vote)
 
 merged_data <- merged_acs %>% 
-  inner_join(merged_covid_election, by = c("fips", "state"))
+  inner_join(merged_covid_election, by = c("fips", "state")) %>% 
+  mutate(infrate = cases/total_population * 100000,
+         mortrate = deaths/total_population * 100000,
+         high_infrate = ifelse(infrate > mean(infrate), 1, 0),
+         high_mortrate = ifelse(infrate > mean(mortrate), 1, 0))
+
+# Write CSV
+write.csv(merged_data, "outputs/data/merged_data.csv")
