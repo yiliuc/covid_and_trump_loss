@@ -80,7 +80,7 @@ dict_03 <- c("DP03_0063E" = "mean_household_income",
              "DP03_0099PE" = "no_insurance")
 dict_05 <- c("DP05_0001PE" = "total_population",
              "DP05_0002PE" = "males",
-             "DP05_0017PE" = "old_85",
+             "DP05_0017PE" = "age_85",
              "DP05_0037PE" = "white_pct",
              "DP05_0038PE" = "black_pct")
 
