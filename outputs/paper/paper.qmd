@@ -19,34 +19,78 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(here)
+library(dplyr)
+library(knitr)
 ```
 
+```{r}
+election_data <- read.csv(here("outputs/data/election_data_clean.csv"))
+covid_data <- read.csv(here("outputs/data/covid_data_clean.csv"))
+acs_data <- read.csv(here("outputs/data/acs_data_clean.csv"))
+covid_election_data <- read.csv(here("outputs/data/covid_election.csv"))
+data <- read.csv(here("outputs/data/merged_data.csv"))
+republican_data <- data %>% 
+  filter(party == "Republican")
+```
 
 # Introduction
 
-You can and should cross-reference sections and sub-sections. 
+You can and should cross-reference sections and sub-sections.
 
 The remainder of this paper is structured as follows. @sec-data....
 
-
-
 # Data {#sec-data}
 
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
+In this paper, the data used mainly consist the voting patterns for 2020 US Federal Election, COVID infection rate and socio-economic variables in each county of US. The voting data is taken from the MIT Election Data Science Lab which includes the voting for each party in county level at each Federal Election from 2000 to 2020. For the COVID data, it is taken from the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University. The socio-economic data is taken from American Community Survey.
+
+## MIT Election Data Science Lab
+
+The MIT Election Data Science Lab is a Lab at MIT which collect and analyzing the election data to supports advances in election science. Their collected data is not limited to the presidential election results, but also covers the midterm or US senate results in either state or county level.
+
+The data abstracted from MITEDSL in this paper is the "County Presidential Election Returns 2000-2020." It contains the number of votes for each party and the total votes at each US county from 2000 to 2020 US Federal Election. In this paper, I will only use the data for the 2020 US Election and focus on the counties on the mainland of US. The @tbl-election summarizes the important variables.
 
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
 #| echo: false
+#| message: false
+#| label: tbl-election
+#| tbl-cap: The summary of voting patterns in 2020 US Federal Presidential Election
+election_data %>% 
+  group_by(party, candidate) %>% 
+  summarise(total = sum(votes),
+            mean = round(mean(pct_vote), 2),
+            median = round(median(pct_vote), 2)) %>%
+  arrange(desc(total)) %>% 
+  rename(`Party` = party,
+         `Candidate` = candidate,
+         `Total Votes` = total,
+         `Mean Pct Vote` = mean,
+         `Median Pct Vote` = median) %>% 
+  kable()
+```
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+The @tbl-election summarizes the voting patterns for each party during the 2020 US Presidential Election. Undoubtedly, the two most popular parties are the Democrat and the Republican. However, it seems that even though Republican has almost double mean percent vote than the Democrat, the total votes for Republican is less than the Democrat. This pattern may indicate that more people living at the high-population states such as California votes for Biden. This finding aligns with the fact that Biden defeated Trump in 2020. I will explain more latter.
+
+## Center for Systems Science and Engineering at JHU
+The Center for Systems Science and Engineering at JHU is the center at the Department of Civils and Engineering to collect the local, national and global multidimensional data including medicine, health care, disaster response etc. During the pandemic, they collected the US and global COVID cases and deaths and report them on their GitHub. Their data is summarized by daily reports, ranging from April 12, 2020 to March 9, 2023.
+
+To illustrate the impact of COVID on the 2020 Election to the greatest extend, the COVID data used in this paper will be the daily report on November 3, 2020 which is the Election Day [citation]. This report contains the aggregated cases and deaths for each each country and counties in US. 
+
+## American Community Survey (ACS)
+The American Community Survey is the survey conducted by the U.S. Census Bureau. The survey contains a variety of socio-economic variables for each county. Although there are different data tables from ACS, I will take 2021 five years estimate of DP02, DP03 and DP05.
+
+These three tables cover the social, economic and demographic characteristics of each county in US. By referring my  previous research where I found the variables which have the highest correlations to the COVID mortality rate, I will use the same variables in this paper. That said, I will extract the data regarding the educational attainment from DP02, especially the proportion of people having at least a bachelor degree. In terms of economic perspective (DP03), I will take the proportion of people with private health 
+```{r}
+#| echo: false
+#| message: false
+#| label: tbl-covid
+#| tbl-cap: The summary of COVID cases and deaths as of Election Day.
+data %>% 
+  group_by(winning_party) %>% 
+  summarise(case = mean(cases),
+            deaths = mean(deaths),
+            inf = mean(infrate),
+            mort = mean(mortrate))
 ```
 
 Talk more about it.
@@ -60,19 +104,17 @@ And also planes (@fig-planes). (You can change the height and width, but don't w
 #| warning: false
 #| message: false
 
-analysis_data <- read_csv(here::here("outputs/data/analysis_data.csv"))
-
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
-  theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
+# analysis_data <- read_csv(here::here("outputs/data/analysis_data.csv"))
+# 
+# analysis_data |> 
+#   ggplot(aes(x = width, y = length)) +
+#   geom_point(alpha = 0.8) +
+#   theme_minimal() +
+#   labs(x = "Wing width (mm)",
+#        y = "Wing length (mm)")
 ```
 
-Talk way more about it. 
-
-
+Talk way more about it.
 
 # Model
 
@@ -82,26 +124,12 @@ Here we briefly describe the Bayesian analysis model used to investigate... Back
 
 ## Model set-up
 
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
-
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
-
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
-
 
 ### Model justification
 
 We expect a positive relationship between the size of the wings and time spent aloft. In particular...
 
 We can use maths by including latex between dollar signs, for instance $\theta$.
-
 
 # Results
 
@@ -113,36 +141,114 @@ Our results are summarized in @tbl-modelresults.
 #| warning: false
 #| message: false
 
-library(rstanarm)
 
-first_model <-
-  readRDS(file = here::here("outputs/models/first_model.rds"))
+highinf_model <- glm(high_infrate ~ prop_higher_education + pctile + 
+                             no_insurance +private_insurance + males + age_85 + 
+                             white_pct + black_pct, data = republican_data)
+summary(highinf_model)
+# highmort_model <- glm(high_mortrate ~ prop_higher_education + pctile + 
+#                              no_insurance +private_insurance + males + age_85 + 
+#                              white_pct + black_pct, data = data, nboots = 10)
+# summary(highmort_model)
+republican_data$prop_score <- predict(highinf_model, type = "response")
 ```
 
 ```{r}
-#| echo: false
-#| eval: true
-#| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
-
-modelsummary::modelsummary(
-  list(
-    "First model" = first_model
-  ),
-  statistic = "mad",
-  fmt = 2
-)
+library(Matching)
+# Propensity score matching
+# mb <- MatchBalance(high_infrate ~ prop_higher_education + pctile + 
+#                              no_insurance +private_insurance + males + age_85 + 
+#                              white_pct + black_pct, data = data)
+rr <- Match(Y = republican_data$pct_vote, Tr = republican_data$high_infrate, 
+            X = republican_data$prop_score, M = 1)
+# mb <- MatchBalance(high_infrate ~ prop_higher_education + pctile + 
+#                               no_insurance +private_insurance + males + age_85 + 
+#                               white_pct + black_pct, match.out = rr,
+#                    data = republican_data, nboots = 10)
+summary(rr)
 ```
 
+```{r}
+# Propensity score regression adjustment
+model_adj <- glm(pct_vote ~ high_infrate + prop_score, data = republican_data)
+summary(model_adj)
+```
+
+```{r}
+# Counterfactual Analysis
+adjusted_data <- data %>% 
+  dplyr::select(state, county.x, fips, party, votes, total_votes, pct_vote, high_infrate)
+
+adjust_function <- function(data){
+  adjust_votes <- c()
+  for (i in 1:nrow(data)){
+    if (data[i,"high_infrate"] == 1){
+      if (data[i,"party"] == "Republican"){
+        adjust_votes[i] <- round((data[i,"pct_vote"] + 0.036928 ) * data[i,"total_votes"], 0)
+      }
+      else if (data[i,"party"] == "Democrat"){
+        adjust_votes[i] <- round((data[i,"pct_vote"] - 0.036928 ) * data[i,"total_votes"], 0)
+      }
+      else {adjust_votes[i] <- data[i,"votes"]}
+    }
+    else {
+      adjust_votes[i] <- data[i,"votes"]
+    }
+  }
+  return(adjust_votes)
+}
 
 
+
+adjusted_data %>% 
+  group_by(state, party) %>% 
+  summarise(votes = sum(votes), .groups = "drop")
+```
+
+```{r}
+adjust_function2 <- function(data) {
+  adjust_votes <- numeric(nrow(data))  # Initialize the vector with the correct length
+  extra_vote_percentage <- 0.036928
+  
+  for (i in 1:nrow(data)) {
+    if (data[i, "high_infrate"] == 1) {
+      total_votes <- data[i, "total_votes"]
+      extra_votes <- round(extra_vote_percentage * total_votes, 0)
+      
+      if (data[i, "party"] == "Republican") {
+        adjust_votes[i] <- data[i, "votes"] + extra_votes
+      } else {
+        # Calculate total votes for non-Republican parties
+        total_non_rep_votes <- sum(data[data$party != "Republican" & data$fips == data[i, "fips"], "votes"])
+        
+        # Distribute the vote loss proportionally
+        if (total_non_rep_votes > 0) {
+          party_vote_share <- data[i, "votes"] / total_non_rep_votes
+          votes_lost <- round(extra_votes * party_vote_share, 0)
+          adjust_votes[i] <- max(0, data[i, "votes"] - votes_lost)
+        } else {
+          adjust_votes[i] <- data[i, "votes"]
+        }
+      }
+    } else {
+      adjust_votes[i] <- data[i, "votes"]
+    }
+  }
+  
+  return(adjust_votes)
+}
+
+adjust_vote1 <- adjust_function(adjusted_data)
+adjust_vote2 <- adjust_function2(adjusted_data)
+adjusted_data$adjust_vote1 <- adjust_vote1
+adjusted_data$adjust_vote2 <- adjust_vote2
+```
 
 # Discussion
 
 ## First discussion point {#sec-first-point}
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this.
 
 ## Second discussion point
 
@@ -154,68 +260,4 @@ Weaknesses and next steps should also be included.
 
 \newpage
 
-\appendix
-
-# Appendix {-}
-
-
-# Additional data details
-
-# Model details {#sec-model-details}
-
-## Posterior predictive check
-
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
-
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
-
-```{r}
-#| eval: true
-#| echo: false
-#| message: false
-#| warning: false
-#| label: fig-ppcheckandposteriorvsprior
-#| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
-
-pp_check(first_model) +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
-posterior_vs_prior(first_model) +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "bottom") +
-  coord_flip()
-```
-
-## Diagnostics
-
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
-
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
-
-```{r}
-#| echo: false
-#| eval: true
-#| message: false
-#| warning: false
-#| label: fig-stanareyouokay
-#| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
-#| layout-ncol: 2
-
-plot(first_model, "trace")
-
-plot(first_model, "rhat")
-```
-
-
-
-\newpage
-
-
 # References
-
-
