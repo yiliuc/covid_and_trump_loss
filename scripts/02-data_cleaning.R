@@ -20,6 +20,7 @@ DP02 <- read.csv("inputs/data/DP_02.csv")
 DP03 <- read.csv("inputs/data/DP_03.csv")
 DP05 <- read.csv("inputs/data/DP_05.csv")
 covid_data <- read.csv("inputs/data/covid_data.csv")
+covid_data2 <- read.csv("inputs/data/covid_data2.csv")
 election_data <- read.csv("inputs/data/countypres_2000-2020.csv")
 
 get_state_abbreviation <- function(state_names) {
@@ -92,19 +93,27 @@ DP05_clean <- data_cleaning(DP05, dict_05)
 # Clean the covid data
 covid_data_clean <- covid_data %>% 
   filter(Country_Region == "US") %>% 
-  select(FIPS, Admin2, Province_State, Confirmed, Deaths) %>% 
+  dplyr::select(FIPS, Admin2, Province_State, Confirmed, Deaths) %>% 
   rename(`county` = Admin2,
          `state` = Province_State,
          `cases` = Confirmed) %>%
   mutate(state = get_state_abbreviation(state)) %>% 
   clean_names() 
-  # mutate(county = if_else(state == "LA", paste0(county, " Parish"), county))
 covid_data_clean <- na.omit(covid_data_clean)
+
+covid_data2_clean <- covid_data2 %>% 
+  filter(Country_Region == "US") %>% 
+  dplyr::select(FIPS, Admin2, Province_State, Confirmed, Deaths) %>% 
+  rename(`county` = Admin2,
+         `state` = Province_State,
+         `cases` = Confirmed) %>%
+  mutate(state = get_state_abbreviation(state)) %>% 
+  clean_names() 
+covid_data2_clean <- na.omit(covid_data2_clean)
 
 # Clean the election data
 election_data_clean <- election_data %>% 
-  filter(year == 2020,
-         ! (party == "OTHER")) %>% 
+  filter(year == 2020) %>% 
   mutate(county = str_to_title(county_name),
          party = str_to_title(party),
          state = state_po,
@@ -112,25 +121,44 @@ election_data_clean <- election_data %>%
          total_votes = totalvotes, 
          fips = county_fips,
          pct_vote = votes/total_votes) %>%
-  select(state_po, county, fips, candidate, party, votes, total_votes, pct_vote)
+  dplyr::select(state_po, county, fips, candidate, party, votes, total_votes, pct_vote)
+
+winning_party <- election_data_clean %>%
+  group_by(fips) %>%
+  summarize(winning_party = party[which.max(votes)])
+
+election_data_clean <- election_data_clean %>%
+  left_join(winning_party, by = "fips")
 
 # Merge the data
 merged_acs <- DP02_clean %>%
   inner_join(DP03_clean, by = c("state", "county", "fips")) %>%
   inner_join(DP05_clean, by = c("state", "county", "fips")) %>% 
-  mutate(pctile = ntile(mean_household_income, 100))
+  mutate(pctile = ntile(mean_household_income, 100),
+         prop_higher_education = as.numeric(prop_higher_education))
 
 merged_covid_election <- covid_data_clean %>% 
   inner_join(election_data_clean, by = "fips") %>% 
   mutate(county = county.x) %>% 
-  select(state, county, fips, cases, deaths, party, votes, total_votes, pct_vote)
+  dplyr::select(state, county, fips, cases, deaths, party, votes, total_votes, pct_vote, winning_party)
 
 merged_data <- merged_acs %>% 
   inner_join(merged_covid_election, by = c("fips", "state")) %>% 
   mutate(infrate = cases/total_population * 100000,
-         mortrate = deaths/total_population * 100000,
-         high_infrate = ifelse(infrate > mean(infrate), 1, 0),
-         high_mortrate = ifelse(infrate > mean(mortrate), 1, 0))
+         mortrate = deaths/total_population * 100000)
+
+mean_infrate <- mean(merged_data$infrate)
+mean_mortrate <- mean(merged_data$mortrate)
+
+merged_data <- merged_data %>% 
+  mutate(high_infrate = ifelse(infrate > mean(infrate), 1, 0),
+         high_mortrate = ifelse(infrate > mean(mortrate), 1, 0),
+         county = county.x) %>% 
+  select(-county.x, county.y)
 
 # Write CSV
-write.csv(merged_data, "outputs/data/merged_data.csv")
+write.csv(election_data_clean, "outputs/data/election_data_clean.csv", row.names = FALSE)
+write.csv(covid_data_clean, "outputs/data/covid_data_clean.csv", row.names = FALSE)
+write.csv(merged_covid_election, "outputs/data/covid_election.csv", row.names = FALSE)
+write.csv(merged_acs, "outputs/data/acs_data_clean.csv", row.names = FALSE)
+write.csv(merged_data, "outputs/data/merged_data.csv", row.names = FALSE)
