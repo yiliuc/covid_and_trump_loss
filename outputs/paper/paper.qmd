@@ -1,14 +1,13 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
-author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: LINK."
-date: "`r Sys.time()`"
-date-format: "D MMMM YYYY"
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+title: "Draft"
+title-block-banner: true
+author: "Yiliu Cao"
+thanks: "Code and data from this analysis are available at: https://github.com/yiliuc/covid_and_trump_loss.git"
+date: "today"
+date-format: "long"
+abstract: "TBD"
 format: pdf
+toc: true
 number-sections: true
 bibliography: references.bib
 ---
@@ -31,30 +30,36 @@ library(tools)
 ```
 
 ```{r}
+#| echo: false
+#| message: false
+
 election_data <- read.csv(here("outputs/data/election_data_clean.csv"))
 covid_data <- read.csv(here("outputs/data/covid_data_clean.csv"))
 acs_data <- read.csv(here("outputs/data/acs_data_clean.csv"))
 covid_election_data <- read.csv(here("outputs/data/covid_election.csv"))
 data <- read.csv(here("outputs/data/merged_data.csv"))
+election_2016_republican <- read.csv(here("outputs/data/election_data_2016.csv")) %>% 
+  filter(party == "Republican") %>% 
+  dplyr::select(fips, pct_vote_2016)
+
 republican_data <- data %>% 
-  filter(party == "Republican")
+  filter(party == "Republican") %>% 
+  inner_join(election_2016_republican, by = "fips") %>% 
+  mutate(change_vote = pct_vote - pct_vote_2016)
 ```
 
 # Introduction
 
-You can and should cross-reference sections and sub-sections.
 
-The remainder of this paper is structured as follows. @sec-data....
+# Data
 
-# Data {#sec-data}
-
-In this paper, the data used mainly consist the voting patterns for 2020 US Federal Election, COVID infection rate and socio-economic variables in each county of US. The voting data is taken from the MIT Election Data Science Lab which includes the voting for each party in county level at each Federal Election from 2000 to 2020. For the COVID data, it is taken from the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University. The socio-economic data is taken from American Community Survey.
+In this paper, the data used mainly consists of the voting patterns for the 2020 US Federal Election, COVID infection rate and socioeconomic variables in each county of the US. The voting data is taken from the MIT Election Data Science Lab, including voting for each party at the county level at each Federal Election from 2000 to 2020. The COVID data is from the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University. The socioeconomic data is taken from the American Community Survey.
 
 ## MIT Election Data Science Lab
 
-The MIT Election Data Science Lab is a Lab at MIT which collect and analyzing the election data to supports advances in election science. Their collected data is not limited to the presidential election results, but also covers the midterm or US senate results in either state or county level.
+The MIT Election Data Science Lab is a lab at MIT that collects and analyzes election data to support advances in election science. Their collected data is not limited to the presidential election results but also covers the midterm or US Senate results at the state or county level.
 
-The data abstracted from MITEDSL in this paper is the "County Presidential Election Returns 2000-2020." It contains the number of votes for each party and the total votes at each US county from 2000 to 2020 US Federal Election. In this paper, I will only use the data for the 2020 US Election and focus on the counties on the mainland of US. The @tbl-election summarizes the important variables.
+The data abstracted from MITEDSL in this paper is the "County Presidential Election Returns 2000-2020." It contains the number of votes for each party and the total votes at each US county from 2000 to the 2020 US Federal Election. In this paper, I will only use the data for the 2020 US Election and focus on the counties on the mainland of the US. The @tbl-election summarizes the essential variables.
 
 ```{r}
 #| echo: false
@@ -75,19 +80,19 @@ election_data %>%
   kable()
 ```
 
-The @tbl-election summarizes the voting patterns for each party during the 2020 US Presidential Election. Undoubtedly, the two most popular parties are the Democrat and the Republican. However, it seems that even though Republican has almost double mean percent vote than the Democrat, the total votes for Republican is less than the Democrat. This pattern may indicate that more people living at the high-population states such as California votes for Biden. This finding aligns with the fact that Biden defeated Trump in 2020. I will explain more latter.
+The @tbl-election summarizes the voting patterns for each party during the 2020 U.S. Presidential Election. Undoubtedly, the two most popular parties are the Democrats and the Republicans. However, even though Republican has almost double the mean percent vote than Democrat, the total votes for Republican is less than for Democrat. This pattern may indicate that more people living in high-population states, such as California, voted for Biden. This finding aligns with the fact that Biden defeated Trump in 2020. I will explain more later.
 
 ## Center for Systems Science and Engineering at JHU
 
-The Center for Systems Science and Engineering at JHU is the center at the Department of Civils and Engineering to collect the local, national and global multidimensional data including medicine, health care, disaster response etc. During the pandemic, they collected the US and global COVID cases and deaths and report them on their GitHub. Their data is summarized by daily reports, ranging from April 12, 2020 to March 9, 2023.
+The Center for Systems Science and Engineering at JHU is at the Department of Civils and Engineering, which collects local, national, and global multidimensional data, including medicine, health care, disaster response, etc. During the pandemic, they collected the U.S. and international COVID cases and deaths and reported them on their GitHub. Their data is summarized by daily reports ranging from April 12, 2020, to March 9, 2023.
 
-To illustrate the impact of COVID on the 2020 Election to the greatest extend, the COVID data used in this paper will be the daily report on November 3, 2020 which is the Election Day \[citation\]. This report contains the aggregated cases and deaths for each each country and counties in US.
+To illustrate the impact of COVID-19 on the 2020 Election to the greatest extent, the COVID data used in this paper will be the daily report on November 3, 2020, which is Election Day \[citation\]. This report contains the aggregated cases and deaths for each country and counties in the U.S.
 
 ## American Community Survey (ACS)
 
-The American Community Survey is the survey conducted by the U.S. Census Bureau. The survey contains a variety of socio-economic variables for each county. Although there are different data tables from ACS, I will take 2021 five years estimate of DP02, DP03 and DP05.
+The American Community Survey is the survey conducted by the U.S. Census Bureau. The survey contains a variety of socio-economic variables for each county. Although there are different data tables from ACS, I will use the 2020 five-year estimate of DP02, DP03, and DP05.
 
-These three tables cover the social, economic and demographic characteristics of each county in US. By referring my previous research where I found the variables which have the highest correlations to the COVID mortality rate, I will use the same variables in this paper. That said, I will extract the data regarding the educational attainment from DP02, especially the proportion of people having at least a bachelor degree. In terms of economic perspective, I will take the proportion of people with private health insurance and the mean household income. Lastly, regarding the demographic factors, I will use the total population, the proportions of children and individuals above 85. I will also take the White and Black people percentage as well.
+These three tables cover the social, economic and demographic characteristics of each county in the U.S. By referring to my previous research, where I found the variables with the highest correlations to the COVID mortality rate, I will use the same variables in this paper. That said, I will extract the data regarding the educational attainment from DP02, especially the proportion of people having at least a bachelor's degree. Regarding the economy, I will take the proportion of people with private health insurance and the mean household income. Lastly, regarding the demographic factors, I will use the total population, the ratios of children and individuals above 85. I will also take the White and Black people percentage as well.
 
 ## Data Cleaning
 
@@ -102,10 +107,17 @@ data %>%
             deaths = mean(deaths),
             inf = mean(infrate),
             mort = mean(mortrate),
-            income = mean(mean_household_income))
+            income = mean(mean_household_income)) %>% 
+  rename(`Winning Party` = winning_party,
+         `Cases` = case,
+         `Deaths` = deaths,
+         `Infection Rate` = inf,
+         `Mortality Rate` = mort,
+         `Income` = income) %>% 
+  kable()
 ```
 
-Combining the three data sources, @tbl-covid shows the COVID cases and deaths, as well as the infection and mortality rate for the county voting for the Democrat and Republican party, respectively. Surprisingly, the average case and deaths of COVID of the counties voting for the Democrat is significantly higher than than the Republican party. However, the values of infection and mortality rate does not show the same dramatic difference. It also emphasizes that the counties (states) voting for the Democrat are population intensive and the counties having more residence generally have higher mean household income level. We can observe this from the average income where the "Democratic" counties have about \$13k mean income higher than the "Republic" ones.
+Combining the three data sources, @tbl-covid shows the COVID cases and deaths and the infection and mortality rate for the county voting for the Democrat and Republican parties, respectively. Surprisingly, the average cases and fatalities of COVID-19 in the counties voting for the Democrats are significantly higher than that of the Republican party. However, the values of infection and mortality rate do not show the same dramatic difference. It also emphasizes that the counties (states) voting for the Democrat are population intensive, and counties with more residence generally have higher mean household income levels. We can observe this from the average income where the "Democratic" counties have about \$13k mean income more elevated than the "Republic" ones.
 
 ```{r}
 #| echo: false
@@ -122,7 +134,7 @@ data  %>%
        y = "Death Rate per 1000")
 ```
 
-@fig-boxplot compares the distribution of county income levels for the two parties. In general, counties voting for the Democrat has a higher income levels than the Republican. In addition, we can observe that the counties are intensively concentrated around income levels \$50k to \$75k, compared to the Democrat where the counties are approximately uniform distributed at each income level. Furthermore, there is barely no counties having at least 150k voting for the Republican party. Both @tbl-covid and @fig-boxplot indicates that the Democrat is in favor of rich counties but poorer counties for Republican. Consequently, the richer counties (states) usually have more electoral votes than the poorer ones, this may provide insighes why Trump lost.
+@fig-boxplot compares the distribution of county income levels for the two parties. In general, counties voting for the Democrats have higher income levels than the Republicans. In addition, we can observe that the counties are intensively concentrated around income levels \$50k to \$75k, compared to the Democrats, where the counties are approximately uniformly distributed at each income level. Furthermore, barely any county has at least 150k voting for the Republican party. Both @tbl-covid and @fig-boxplot indicates that the Democrat is in favour of wealthy counties but poorer counties for Republican. Consequently, the more affluent counties (states) usually have more electoral votes than the poorer ones; this may provide insights into why Trump lost.
 
 ```{r}
 #| echo: false
@@ -147,7 +159,7 @@ county_clean <- county %>%
          state = get_state_abbreviation(toTitleCase(state)),
          county = toTitleCase(county)) %>% 
   filter(region != "AK") %>% 
-  select(-region, -subregion)
+  dplyr::select(-region, -subregion)
 
 merged_data <- county_clean %>% left_join(republican_data, by = c("state", "county"))
 ```
@@ -184,21 +196,21 @@ grid.arrange(p1, p2, ncol = 1)
 
 ## Data Limitation
 
-Although the merged data covers the voting patterns, socio-economic characteristics and COVID infection rate by county, some of the counties are missing. From the above two maps, the counties on the middle west shows a grey color, indicating that the data for these counties are absent. This absence of data may increase the bias and hence influence the accuracy of the data analyses.
+Although the merged data covers the voting patterns, socio-economic characteristics and COVID-19 infection rate by county, some counties are missing. From the above two maps, the counties in the middle west show grey, indicating that the data for these counties are absent. This absence of data may increase bias and influence the accuracy of data analyses.
 
 # Methods
 
-This paper aims to conduct the casual inference between the 2020 voting patterns and COVID, to find whether Trump can contribute his loss to the COVID. To find the casual effect in the observational study, I will implement the methods of propensity scores to find the change of votes for Trump due to the pandemic. Based on the results, I will also conduct a counterfactual analysis to see what would be happened if there was no COVID,
+This paper aims to make a causal inference between the 2020 voting patterns and COVID-19 to find whether Trump can contribute to his loss of COVID-19. To see the causal effect in the observational study, I will implement the methods of propensity scores to find the change in votes for Trump due to the pandemic. Based on the results, I will also conduct a counterfactual analysis to see what would have happened if there had been no COVID-19,
 
-First and foremost, we need to define the treatment. The treatment in an experiment is something that will be artificially imposed to a certain groups of people to see the effect of interested variable with and without this treatment. Therefore the people with the treatment is called treatment group and the rest are called the control group. The settings of treatment and control group is to test whether the imposed factor really have impacts on the interested variable. However, since this is an observational study, it is unrealistic to impose a factor manually. In order to find the the casual effect of COVID on Trump's voting, I will choose the treatment to be whether a county has a high infection rate.
+First and foremost, we need to define the treatment. The treatment in an experiment will be artificially imposed on specific groups of people to see the effect of interested variables with and without this treatment. Therefore, the people with the treatment are called the treatment group, and the rest are called the control group. The treatment and control group settings are to test whether the imposed factor impacts the interested variable. However, since this is an observational study, it is unrealistic to set a factor manually. Therefore, to find the causal effect of COVID-19 on Trump's voting, I will choose the treatment to be whether a county has a high infection rate.
 
 ## Propensity Score
 
-Propensity score is a technique that can help us to decide which county would be in the treatment group. That said, the propensity score in this study is the probability of a county having a high infection rate given a set of socioeconomic variables. By using the propensity score, it can ensure that the two counties with similar propensity score having the same distribution of the observed socio-economic variables such as income level even though they are in the different group. This is fantastic as we can have may pairs from treatment of control group which have similar covariates by fixing propensity scores. The key drawback that we can not estimate the casual effect from observational studies is addressed.
+Propensity score is a technique that can help us to decide which county would be in the treatment group. That said, the propensity score in this study is the probability of a county having a high infection rate, given a set of socioeconomic variables. Using the propensity score can ensure that the two counties with similar propensity scores have the same distribution of the observed socioeconomic variables, such as income level, even though they are in different groups. This is fantastic, as we can have many pairs from the treatment of the control group with similar covariates by fixing propensity scores. The key drawback is that we can not estimate the causal effect from observational studies.
 
-In addition to that, by finding the propensity scores, we can also reconstruct our assignment mechanism to a strongly ignorable one. An assignment mechanism is "strongly ignorable" if and only if, given the observed covariates, the potential outcomes are independent of the treatment assignment. This indicates that the change of voting for Trump is independent to our assignment that a county has high or low infection rate.
+In addition, by finding the propensity scores, we can reconstruct our assignment mechanism to a strongly ignorable one. An assignment mechanism is "strongly ignorable" if and only if, given the observed covariates, the potential outcomes are independent of the treatment assignment. This indicates that the voting change for Trump is independent of our assignment that a county has a high or low infection rate.
 
-As the propensity score represents the probability of a county having high infection rate, therefore we need to find a logistic regression to predict this probability. On my previous paper, I already find the best model predicting the mortality rate of COVID in each US county. Even though that one was to predict the mortality rate, however, the mortality is correlated with infection rate. Therefore I will take the dependent variables in that model to be the covariates in predicting the propensity score for each county, which is:
+As the propensity score represents the probability of a county having a high infection rate, we must find a logistic regression to predict this probability. In my previous paper, I already found the best model predicting the mortality rate of COVID in each US county. Even though that paper was to predict the mortality rate, the mortality is correlated with the infection rate. Therefore, I will take the dependent variables in that model to be the covariates in predicting the propensity score for each county, which is:
 
 ```{=tex}
 \begin{align*}
@@ -214,73 +226,129 @@ As the propensity score represents the probability of a county having high infec
 \end{align*}
 ```
 
-Using the above model, we can therefore find the PS for each county. However, there are three different ways to use the propensity scores to find the treatment effect.
+Therefore, we can find the PS for each county using the above model. However, there are three ways to use the propensity scores to find the treatment effect.
 
 ### Propensity Score Matching
-The package needed to implement the matching is the `matching`. Using this package, we can match the observations in treatment and control group having the same or similar propensity scores. Then take only take the matched pairs to be the new data set and find the find the treatment effect between them. In addition, we can also check the balance between the treatment and control groups. 
+The package needed to implement the matching is the `Matching.` Using this package, we can match the observations in the treatment and control groups having the same or similar propensity scores. Then, take only the matched pairs to be the new data set and find the treatment effect between them. In addition, we can also check the balance between the treatment and control groups. 
 
-However, the most significant drawback is that the new data set can only contain the matched pairs. We may lose a huge amount of observations during this process. Our predictions may also not be accurate.
+However, the most significant drawback is that the new data set can only contain the matched pairs. We may lose a considerable amount of observations during this process. Our predictions may also not be accurate.
 
 ### Propensity Score Stratification
-As introduced above that using PSM may cause the waste of data and results in bias. However, propensity score stratification will use the entire data set to avoid the waste. The way to do this is to split the data into different quantiles and fit a model for each subclass with the only dependent variable is the treatment variable. Then calculate the average casual effect for the subclasses.
+As introduced above, using PSM may cause the waste of data and results in bias. However, propensity score stratification will use the entire data set to avoid waste. The way to do this is to split the data into different quantiles and fit a model for each subclass, with the only dependent variable being the treatment variable. Then, calculate the average casual effect for the subclasses.
 
-Even though the PSS can use the entire data set, however, the choice of quantiles will be closely related to the predictions. If we have a large sample and want to split the data into many subclasses, then this method may be computational slow.
+Even though the PSS can use the entire data set, however, the choice of quantiles will be closely related to the predictions. If we have a large sample and want to split the data into many subclasses, then this method may be computationally slow.
 
 ### Propensity Score Regression Adjustment
-The last method is the most straightforward, meaning that we just fit a regression model with treatment variable and propensity score be the two dependent variables.
+The last method is the most straightforward, meaning we just fit a regression model with the treatment variable and propensity score as the two dependent variables.
 
-The above three methods have their unique advantages but the results may vary between different data sets. I will perform both the three methods and to compare which one would be the best.
+Each of the above three methods has its unique advantages, but the results may vary between different data sets. I will perform both of the three methods and compare which one would be the best.
 
 
-## Counterfactural Analysis
-By using the methodology of propensity score, we are able to access the casual effect of high infection rate on the votings for Trump. However, it can not tell us the election results and we can not make conclusions about the COVID and election. Therefore, I will conduct a counterfactural analysis, meaning that I will re-calculate the votes for Trump and Biden, to see if the final election results would be changed. 
+## Counterfactual Analysis
+Using the propensity score methodology, we can assess the causal effect of a high infection rate on the voting for Trump. However, it can not tell us the election results, and we can not draw conclusions about COVID and the election. Therefore, I will conduct a counterfactual analysis, meaning that I will re-calculate the votes for Trump and Biden to see if the final election results will change. 
 
-The way I will use to re-calculate the votes for the two candidates is to follow the official rule of election. By finding the difference of voting percentage, I will re-allocate the votings for the two parties and calculate the electoral votes in each state using the rule of winner-takes-all.
+Eventually, I will re-calculate the votes for the two candidates to follow the official election rule. By finding the difference in voting percentage, I will re-allocate the voting for the two parties and calculate the electoral votes in each state using the winner-takes-all rule.
 
 # Results
 
-Our results are summarized in @tbl-modelresults.
-
 ```{r}
 #| echo: false
-#| eval: true
 #| warning: false
 #| message: false
 
-
-highinf_model <- glm(high_infrate ~ prop_higher_education + pctile + 
-                             no_insurance +private_insurance + males + age_85 + 
-                             white_pct + black_pct, data = republican_data)
-summary(highinf_model)
-# highmort_model <- glm(high_mortrate ~ prop_higher_education + pctile + 
-#                              no_insurance +private_insurance + males + age_85 + 
-#                              white_pct + black_pct, data = data, nboots = 10)
-# summary(highmort_model)
+highinf_model <- glm(treatment ~ prop_higher_education + pctile + 
+                       no_insurance + private_insurance + males +
+                       white_pct + black_pct, family = binomial(),
+                      data = republican_data)
+# summary(highinf_model)
 republican_data$prop_score <- predict(highinf_model, type = "response")
 ```
 
+```{=tex}
+\begin{align*}
+\text{Logit}(\text{PS}) &= -2.008 + \\
+& -0.032 \times \text{prop\_higher\_education} \\
+& -0.009 \times \text{IncomePctile} \\
+& +0.088 \times \text{no\_insurance} \\
+& +0.051 \times \text{private\_insurance} \\
+& +0.019 \times \text{males} \\
+& +0.055 \times \text{old\_85} \\
+& -0.030 \times \text{white\_pct} \\
+& +0.026 \times \text{black\_pct}
+\end{align*}
+```
+
+The above equation shows the logistic regression model to predict the propensity score for each county, given the covariates. It seems that insurance is a critical factor in the infection rate. Interestingly, the counties with a higher proportion of people with no insurance and private insurance will both increase the probability of this county having a high infection rate. Using this model, we can find the propensity score for each county and implement the three methods.
+
 ```{r}
+#| echo: false
+#| message: false
+
 library(Matching)
 # Propensity score matching
-# mb <- MatchBalance(high_infrate ~ prop_higher_education + pctile + 
-#                              no_insurance +private_insurance + males + age_85 + 
-#                              white_pct + black_pct, data = data)
-rr <- Match(Y = republican_data$pct_vote, Tr = republican_data$high_infrate, 
+rr <- Match(Y = republican_data$change_vote, Tr = republican_data$treatment, 
             X = republican_data$prop_score, M = 1)
-# mb <- MatchBalance(high_infrate ~ prop_higher_education + pctile + 
-#                               no_insurance +private_insurance + males + age_85 + 
-#                               white_pct + black_pct, match.out = rr,
-#                    data = republican_data, nboots = 10)
-summary(rr)
+# summary(rr)
 ```
 
 ```{r}
+#| echo: false
+#| message: false
+#| label: tbl-PSS
+#| tbl-cap: The results of causal effect using propensity score statification
+# PSS
+sub <- quantile(republican_data$prop_score, probs = c(0.2, 0.4, 0.6, 0.8))
+
+sub1 <- glm(pct_vote ~ high_infrate, 
+            data = republican_data[republican_data$prop_score <= sub[1], ])
+sub2 <- glm(pct_vote ~ high_infrate, 
+            data = republican_data[republican_data$prop_score > sub[1] & republican_data$prop_score <= sub[2], ])
+
+sub3 <- glm(pct_vote ~ high_infrate, 
+            data = republican_data[republican_data$prop_score > sub[2] & republican_data$prop_score <= sub[3], ])
+
+sub4 <- glm(pct_vote ~ high_infrate, 
+            data = republican_data[republican_data$prop_score > sub[3] & republican_data$prop_score <= sub[4], ])
+
+sub5 <- glm(pct_vote ~ high_infrate, 
+            data = republican_data[republican_data$prop_score > sub[4], ])
+
+# Extracting the necessary information from each model
+extract_info <- function(model, quantile) {
+  coef_summary <- summary(model)$coefficients
+  data.frame(
+    quantile = quantile,
+    ce = coef_summary["high_infrate", "Estimate"],
+    p_val = coef_summary["high_infrate", "Pr(>|t|)"]
+  )
+}
+
+# Creating data frames for each model
+df1 <- extract_info(sub1, "0-20%")
+df2 <- extract_info(sub2, "20-40%")
+df3 <- extract_info(sub3, "40-60%")
+df4 <- extract_info(sub4, "60-80%")
+df5 <- extract_info(sub5, "80-100%")
+
+# Combining all data frames into one
+rbind(df1, df2, df3, df4, df5) %>% 
+  rename(`PS Quantile` = quantile,
+         `Estimated CE` = ce,
+         `P Value` = p_val) %>% 
+  kable()
+```
+
+```{r}
+#| echo: false
+#| message: false
 # Propensity score regression adjustment
-model_adj <- glm(pct_vote ~ high_infrate + prop_score, data = republican_data)
-summary(model_adj)
+model_adj <- glm(pct_vote ~ treatment + prop_score, data = republican_data)
+# summary(model_adj)
 ```
 
 ```{r}
+#| echo: false
+#| message: false
 # Counterfactual Analysis
 adjusted_data <- data %>% 
   dplyr::select(state, county, fips, party, votes, total_votes, pct_vote, high_infrate)
@@ -312,6 +380,8 @@ adjusted_data %>%
 ```
 
 ```{r}
+#| echo: false
+#| message: false
 adjust_function2 <- function(data) {
   adjust_votes <- numeric(nrow(data))  # Initialize the vector with the correct length
   extra_vote_percentage <- 0.036928
