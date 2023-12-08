@@ -13,6 +13,7 @@ library(stringr)
 library(tidyverse)
 library(janitor)
 library(tools)
+library(tidyr)
 
 #### Clean data ####
 # Import all the raw data
@@ -122,33 +123,31 @@ aggregated_data <- non_total_data %>%
   group_by(state, county, fips, candidate, party, total_votes) %>% 
   summarize(votes = sum(votes, na.rm = TRUE), .groups = 'drop')
 
-election_data_2020 <- bind_rows(total_data, aggregated_data) %>% 
-  mutate(pct_vote = votes/total_votes)
+election_data_2020 <- bind_rows(total_data, aggregated_data)
 
-winning_party <- election_data_2020 %>%
-  group_by(fips) %>%
-  summarize(winning_party = party[which.max(votes)])
+election_data_2020_clean <- election_data_2020 %>%
+  group_by(state, county, fips, party, total_votes) %>%
+  summarise(votes = sum(votes), .groups = 'drop') %>%
+  pivot_wider(names_from = party, values_from = votes) %>% 
+  filter(state != "AK") %>% 
+  mutate(vote_demo = Democrat,
+         vote_rep = Republican,
+         vote_green = Green,
+         vote_lib = Libertarian,
+         vote_other = Other,
+         across(c(vote_demo, vote_rep, vote_green, vote_lib, vote_other), 
+                ~replace(., is.na(.), 0)),
+         # winning_party = ifelse(vote_demo > vote_rep, "Democrat", "Republican"),
+         pct_vote_demo = vote_demo/total_votes,
+         pct_vote_rep = as.numeric(vote_rep/total_votes)) %>% 
+  dplyr::select(-Democrat, -Green, -Libertarian, -Other, -Republican)
 
-election_data_2020 <- election_data_2020 %>%
-  left_join(winning_party, by = "fips")
-
-total_votes_rd <- election_data_2020 %>%
-  filter(party %in% c("Democrat", "Republican")) %>%
-  group_by(fips) %>%
-  summarize(total_votes_rd = sum(votes),
-            .groups = 'drop')
-
-votes_r <- election_data_2020 %>%
-  filter(party == "Republican") %>%
-  group_by(fips) %>%
-  summarize(votes_r = sum(votes),
-            .groups = 'drop')
-
-election_data_clean <- election_data_2020 %>%
-  left_join(total_votes_rd, by = "fips") %>%
-  left_join(votes_r, by = "fips") %>% 
-  mutate(ratio_rd = votes_r/total_votes_rd) %>% 
-  dplyr::select(-votes_r, -total_votes_rd)
+mean_values <- round(colMeans(election_data_2020_clean[, -c(1, 2, 3)], na.rm = TRUE), 1)
+new_row_base <- data.frame(state = "UT", county = "Salt Lake", fips = 49035)
+new_row <- cbind(new_row_base, t(data.frame(mean_values)))
+election_data_2020_clean <- rbind(election_data_2020_clean, new_row) %>% 
+  mutate(winning_party = ifelse(vote_demo > vote_rep, "Democrat", "Republican"),
+         fips = as.numeric(fips))
 
 election_data_2016 <- election_data %>% 
   filter(year == 2016) %>% 
@@ -157,9 +156,31 @@ election_data_2016 <- election_data %>%
          state = state_po,
          votes = candidatevotes,
          total_votes = totalvotes, 
-         fips = county_fips,
-         pct_vote_2016 = votes/total_votes) %>% 
-  dplyr::select(state, county, fips, candidate, party, votes, total_votes, pct_vote_2016)
+         fips = county_fips) %>% 
+  dplyr::select(state, county, fips, candidate, party, votes, total_votes)
+
+election_data_2016_clean <- election_data_2016 %>%
+  group_by(state, county, fips, party, total_votes) %>%
+  summarise(votes = sum(votes), .groups = 'drop') %>%
+  pivot_wider(names_from = party, values_from = votes) %>% 
+  mutate(vote_demo = Democrat,
+         vote_rep = Republican,
+         vote_other = Other,
+         pct_vote_demo16 = Democrat/total_votes,
+         pct_vote_rep16 = Republican/total_votes,
+         across(c(pct_vote_demo16, pct_vote_rep16), 
+                ~replace(., is.na(.), 0)),
+         rep_won16 = ifelse(pct_vote_rep16 > pct_vote_demo16, 1, 0),
+         demo_won16 = ifelse(pct_vote_rep16 < pct_vote_demo16, 1, 0)) %>% 
+  dplyr::select(state, county, fips, pct_vote_demo16, pct_vote_rep16, rep_won16,
+                demo_won16)
+
+election_data_clean <- election_data_2020_clean %>% 
+  full_join(election_data_2016_clean, by = "fips") %>% 
+  filter(!rowSums(is.na(.))) %>% 
+  mutate(state = state.x,
+         county = county.x) %>% 
+  dplyr::select(state, county, everything(), -county.x, -county.y, -state.x, -state.y)
 
 # Merge the data
 merged_acs <- DP02_clean %>%
@@ -168,32 +189,31 @@ merged_acs <- DP02_clean %>%
   mutate(pctile = ntile(mean_household_income, 100),
          prop_higher_education = as.numeric(prop_higher_education))
 
-merged_covid_election <- covid_data_clean %>% 
-  inner_join(election_data_clean, by = "fips") %>% 
+merged_covid_election <- election_data_clean %>% 
+  left_join(covid_data_clean, by = "fips") %>% 
   mutate(county = county.x,
-         state = state.x) %>% 
-  dplyr::select(state, county, fips, cases, deaths, party, votes, total_votes, 
-         pct_vote, winning_party, ratio_rd)
+         state = state.x,
+         across(c(cases, deaths), 
+                ~replace(., is.na(.), 0))) %>% 
+  dplyr::select(state, county, everything(), -county.x, -county.y, -state.x, -state.y)
 
 merged_data <- merged_acs %>% 
-  inner_join(merged_covid_election, by = c("fips", "state")) %>% 
+  left_join(merged_covid_election, by = "fips") %>% 
+  filter(state.x != "AK" & state.x != "HI") %>% 
   mutate(infrate = cases/total_population * 100000,
-         mortrate = deaths/total_population * 100000)
-
-mean_infrate <- mean((merged_data %>% 
-                        group_by(fips) %>% 
-                        summarise(mean = mean(infrate)))$mean)
-
-mean_income <- mean((merged_data %>% 
-                        group_by(fips) %>% 
-                        summarise(mean = mean(mean_household_income)))$mean)
-
-merged_data <- merged_data %>% 
-  mutate(high_infrate = ifelse(infrate > mean_infrate, 1, 0),
-         high_income = ifelse(mean_household_income > mean_income, 1, 0),
-         treatment = high_infrate*high_income,
-         county = county.x) %>% 
-  dplyr::select(-county.x, county.y)
+         mortrate = deaths/total_population * 100000,
+         dpc = deaths/cases*100000,
+         across(dpc, 
+                ~replace(., is.na(.), 0)),
+         county = county.x,
+         state = state.x,
+         high_infrate = ifelse(infrate > quantile(infrate, 0.5), 1, 0),
+         high_dpc = ifelse(dpc > quantile(dpc, 0.3), 1, 0),
+         high_income = ifelse(mean_household_income > quantile(mean_household_income, 0.3), 1, 0),
+         treatment = high_dpc*high_income,
+         county = ifelse(state == "LA", gsub(" Parish", "", county), county),
+         change_vote_rep = as.numeric(pct_vote_rep) - pct_vote_rep16) %>% 
+  dplyr::select(state, county, everything(), -county.x, -county.y, -state.x, -state.y)
 
 # Write CSV
 write.csv(election_data_clean, "outputs/data/election_data_clean.csv", row.names = FALSE)
