@@ -1,11 +1,11 @@
 ---
-title: "Draft"
+title: "Causal Inference in the 2020 US Federal Election: While COVID-19 Lowered Trump's Support, Loss of Confidence Among Wealthier Voters Seems More Decisive"
 title-block-banner: true
 author: "Yiliu Cao"
 thanks: "Code and data from this analysis are available at: https://github.com/yiliuc/covid_and_trump_loss.git"
 date: "today"
 date-format: "long"
-abstract: "TBD"
+abstract: "This study used the election data from MIT EDSL and COVID-19 data from JHU CSSE, to investigate the causal inference between COVID-19 and Donald Trump's loss during the 2020 US Federal Election. The main methodology used in this paper is Propensity Score Matching with testing different treatments. The primary finding is that the counties with high death per case rate seems to vote less for Trump with approximate treatment effect -0.01. Besides, it seems that the interaction effect with income seems to be more critical: the medium-high income levels counties seems to vote at maximum 3% less for Trump compared to those low income counties. Furthermore, this paper also conduct counterfactual analysis and indicate the Trump would pre-elect if there was no COVID. Furture analysis should focus more on the choice of covariates to predict propensity scores."
 format: pdf
 toc: true
 number-sections: true
@@ -38,14 +38,6 @@ covid_data <- read.csv(here("outputs/data/covid_data_clean.csv"))
 acs_data <- read.csv(here("outputs/data/acs_data_clean.csv"))
 covid_election_data <- read.csv(here("outputs/data/covid_election.csv"))
 data <- read.csv(here("outputs/data/merged_data.csv"))
-election_2016_republican <- read.csv(here("outputs/data/election_data_2016.csv")) %>% 
-  filter(party == "Republican") %>% 
-  dplyr::select(fips, pct_vote_2016)
-
-republican_data <- data %>% 
-  filter(party == "Republican") %>% 
-  inner_join(election_2016_republican, by = "fips") %>% 
-  mutate(change_vote = pct_vote - pct_vote_2016)
 ```
 
 # Introduction
@@ -66,18 +58,18 @@ The data abstracted from MITEDSL in this paper is the "County Presidential Elect
 #| message: false
 #| label: tbl-election
 #| tbl-cap: The summary of voting patterns in 2020 US Federal Presidential Election
-election_data %>% 
-  group_by(party, candidate) %>% 
-  summarise(total = sum(votes),
-            mean = round(mean(pct_vote), 2),
-            median = round(median(pct_vote), 2)) %>%
-  arrange(desc(total)) %>% 
-  rename(`Party` = party,
-         `Candidate` = candidate,
-         `Total Votes` = total,
-         `Mean Pct Vote` = mean,
-         `Median Pct Vote` = median) %>% 
-  kable()
+# election_data %>% 
+#   group_by(party, candidate) %>% 
+#   summarise(total = sum(votes),
+#             mean = round(mean(pct_vote), 2),
+#             median = round(median(pct_vote), 2)) %>%
+#   arrange(desc(total)) %>% 
+#   rename(`Party` = party,
+#          `Candidate` = candidate,
+#          `Total Votes` = total,
+#          `Mean Pct Vote` = mean,
+#          `Median Pct Vote` = median) %>% 
+#   kable()
 ```
 
 The @tbl-election summarizes the voting patterns for each party during the 2020 U.S. Presidential Election. Undoubtedly, the two most popular parties are the Democrats and the Republicans. However, even though Republican has almost double the mean percent vote than Democrat, the total votes for Republican is less than for Democrat. This pattern may indicate that more people living in high-population states, such as California, voted for Biden. This finding aligns with the fact that Biden defeated Trump in 2020. I will explain more later.
@@ -106,13 +98,12 @@ data %>%
   summarise(case = mean(cases),
             deaths = mean(deaths),
             inf = mean(infrate),
-            mort = mean(mortrate),
+            dpc = mean(dpc),
             income = mean(mean_household_income)) %>% 
   rename(`Winning Party` = winning_party,
          `Cases` = case,
          `Deaths` = deaths,
          `Infection Rate` = inf,
-         `Mortality Rate` = mort,
          `Income` = income) %>% 
   kable()
 ```
@@ -130,8 +121,8 @@ data  %>%
   geom_boxplot() +
   geom_jitter(alpha = 0.04, width = 0.3, height = 0) +
   theme_minimal() +
-  labs(x = "Voting Party",
-       y = "Death Rate per 1000")
+  labs(x = "Winning Party",
+       y = "Mean Household Income")
 ```
 
 @fig-boxplot compares the distribution of county income levels for the two parties. In general, counties voting for the Democrats have higher income levels than the Republicans. In addition, we can observe that the counties are intensively concentrated around income levels \$50k to \$75k, compared to the Democrats, where the counties are approximately uniformly distributed at each income level. Furthermore, barely any county has at least 150k voting for the Republican party. Both @tbl-covid and @fig-boxplot indicates that the Democrat is in favour of wealthy counties but poorer counties for Republican. Consequently, the more affluent counties (states) usually have more electoral votes than the poorer ones; this may provide insights into why Trump lost.
@@ -158,11 +149,57 @@ county_clean <- county %>%
          county = subregion,
          state = get_state_abbreviation(toTitleCase(state)),
          county = toTitleCase(county)) %>% 
-  filter(region != "AK") %>% 
+  filter(region != "AK" & region != "HI") %>% 
   dplyr::select(-region, -subregion)
 
-merged_data <- county_clean %>% left_join(republican_data, by = c("state", "county"))
+merged_data <- county_clean %>% 
+  left_join(data, by = c("state", "county"))
 ```
+
+```{r}
+binned_data <- data %>%
+  mutate(dpc_pctile = ntile(dpc, 100)) %>%  # Adjust 'breaks' to change number of bins
+  group_by(dpc_pctile) %>%
+  summarize(mean_rep = mean(pct_vote_rep, na.rm = TRUE),
+            mean_demo = mean(pct_vote_demo, na.rm = TRUE)) %>% 
+  mutate(bin = 1:n())
+
+binned_data2 <- data %>%
+  mutate(dpc_pctile = ntile(mean_household_income, 100)) %>%  # Adjust 'breaks' to change number of bins
+  group_by(dpc_pctile) %>%
+  summarize(mean_rep = mean(pct_vote_rep, na.rm = TRUE),
+            mean_demo = mean(pct_vote_demo, na.rm = TRUE)) %>% 
+  mutate(bin = 1:n(),
+         sum = mean_rep + mean_demo)
+
+# Plotting
+ggplot(binned_data, aes(x = bin, y = mean_rep)) +
+  geom_point() +  # or geom_line() depending on your preference
+  geom_smooth(method = "lm",formula = y ~ poly(x, 4), se=FALSE) +
+  theme_minimal() +
+  labs(x = "Binned mortality per case ", y = "Mean vote for Trump",
+       title = "Votes for Trump vs. MPC")
+ggplot(binned_data, aes(x = bin, y = mean_demo)) +
+  geom_point() +  # or geom_line() depending on your preference
+  geom_smooth(method = "lm", formula = y ~ poly(x, 4),se=FALSE) +
+  theme_minimal() +
+  labs(x = "Binned mortality per case ", y = "Mean vote for Biden", 
+       title = "Votes for Biden vs. MPC")
+
+ggplot(binned_data2, aes(x = bin, y = mean_rep)) +
+  geom_point() +  # or geom_line() depending on your preference
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se=FALSE) +
+  theme_minimal() +
+  labs(x = "Binned income levels", y = "Mean vote for Trump", 
+       title = "Votes for Trump vs. Income")
+ggplot(binned_data2, aes(x = bin, y = mean_demo)) +
+  geom_point() +  # or geom_line() depending on your preference
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se=FALSE) +
+  theme_minimal() +
+  labs(x = "Binned income levels", y = "Mean vote for Biden",
+       title = "Votes for Biden vs. Income")
+```
+
 
 ```{r}
 #| echo: false
@@ -173,25 +210,61 @@ merged_data <- county_clean %>% left_join(republican_data, by = c("state", "coun
 #| fig-cap: The ratio of votes for the Republican and the infection rate per 100k in each county
 
 p1 <- ggplot(data = merged_data, aes(x = long, y = lat, group = group)) + 
-  geom_polygon(aes(fill = ratio_rd), color = "black") +
+  geom_polygon(aes(fill = pct_vote_rep), color = "black") +
   scale_fill_distiller(palette = "RdBu", direction = -1, na.value = "grey") +
-  labs(fill = 'Share of Republican') +
+  labs(title = "The relative share of votes between Republican and Democrat party",
+       fill = 'Share of Republican') +
   coord_quickmap() +
   theme_void() +
   geom_path(data = state, aes(x = long, y = lat, group = group), color = "black", linewidth = 0.5)
 
 # Second plot
 p2 <- ggplot(data = merged_data, aes(x = long, y = lat, group = group)) + 
-  geom_polygon(aes(fill = infrate), color = "black") +
+  geom_polygon(aes(fill = dpc), color = "black") +
   scale_fill_gradient(low = "white", high = "darkblue", na.value = "grey",
                       limits = c(0, 5000), oob = scales::squish) +
-  labs(fill = 'Infection Rate per 100k') +
+  labs(title = "The distribution of death per case rate by 100K",
+       fill = 'Death per cases by 100k') +
+  coord_quickmap() +
+  theme_void() +
+  geom_path(data = state, aes(x = long, y = lat, group = group), color = "black", linewidth = 0.5)
+
+p3 <- ggplot(data = merged_data, aes(x = long, y = lat, group = group)) + 
+  geom_polygon(aes(fill = mean_household_income), color = "black") +
+  scale_fill_gradient(low = "white", high = "darkblue", na.value = "grey",
+                      limits = c(60000, 120000), oob = scales::squish) +
+  labs(title = "The distribution of mean household income",
+       fill = 'Mean Hosehold Income') +
   coord_quickmap() +
   theme_void() +
   geom_path(data = state, aes(x = long, y = lat, group = group), color = "black", linewidth = 0.5)
 
 # Arrange the plots in a 2x1 layout
-grid.arrange(p1, p2, ncol = 1)
+grid.arrange(p1, p3, p2, ncol = 1)
+```
+
+```{r}
+#| eval: false
+library(sp)
+library(geojsonio)
+library(ggplot2)
+library(dplyr)
+library(broom)
+hex_county <- geojson_read("us_county_hexgrid.geojson", what = "sp")
+
+# Reformat the data as needed (depending on your data structure)
+hex_county@data <- hex_county@data %>% 
+  mutate(adjusted_field = gsub("some_pattern", "replacement", original_field))
+
+# Fortify the data for ggplot
+hex_county_fortified <- tidy(hex_county, region = "desired_region_field")
+
+# Plot the hexagon map
+ggplot() +
+  geom_polygon(data = hex_county_fortified, aes(x = long, y = lat, group = group), fill="#a1dab4", color="#f7f7f7") +
+  geom_text(data = hex_county_fortified, aes(x = long, y = lat, label = label_field), size = 3) +
+  theme_void() +
+  coord_map()
 ```
 
 ## Data Limitation
@@ -255,13 +328,14 @@ Eventually, I will re-calculate the votes for the two candidates to follow the o
 #| echo: false
 #| warning: false
 #| message: false
+data <- read.csv(here("outputs/data/merged_data.csv"))
 
 highinf_model <- glm(treatment ~ prop_higher_education + pctile + 
                        no_insurance + private_insurance + males +
                        white_pct + black_pct, family = binomial(),
-                      data = republican_data)
+                      data = data)
 # summary(highinf_model)
-republican_data$prop_score <- predict(highinf_model, type = "response")
+data$prop_score <- predict(highinf_model, type = "response")
 ```
 
 ```{=tex}
@@ -279,6 +353,10 @@ republican_data$prop_score <- predict(highinf_model, type = "response")
 ```
 
 The above equation shows the logistic regression model to predict the propensity score for each county, given the covariates. It seems that insurance is a critical factor in the infection rate. Interestingly, the counties with a higher proportion of people with no insurance and private insurance will both increase the probability of this county having a high infection rate. Using this model, we can find the propensity score for each county and implement the three methods.
+```{r}
+model <- lm(pct_vote_rep ~ dpc + mean_household_income, data = data)
+summary(model)
+```
 
 ```{r}
 #| echo: false
@@ -286,9 +364,9 @@ The above equation shows the logistic regression model to predict the propensity
 
 library(Matching)
 # Propensity score matching
-rr <- Match(Y = republican_data$change_vote, Tr = republican_data$treatment, 
-            X = republican_data$prop_score, M = 1)
-# summary(rr)
+rr <- Match(Y = data$pct_vote_rep, Tr = data$treatment, 
+            X = data$prop_score, M = 1)
+summary(rr)
 ```
 
 ```{r}
@@ -296,31 +374,33 @@ rr <- Match(Y = republican_data$change_vote, Tr = republican_data$treatment,
 #| message: false
 #| label: tbl-PSS
 #| tbl-cap: The results of causal effect using propensity score statification
+#| eval: false
 # PSS
-sub <- quantile(republican_data$prop_score, probs = c(0.2, 0.4, 0.6, 0.8))
+sub <- quantile(data$prop_score, probs = c(0.2, 0.4, 0.6, 0.8))
 
-sub1 <- glm(pct_vote ~ high_infrate, 
-            data = republican_data[republican_data$prop_score <= sub[1], ])
-sub2 <- glm(pct_vote ~ high_infrate, 
-            data = republican_data[republican_data$prop_score > sub[1] & republican_data$prop_score <= sub[2], ])
+sub1 <- glm(pct_vote_rep ~ treatment,
+            data = data[data$prop_score <= sub[1], ])
+sub2 <- glm(pct_vote_rep ~ treatment,
+            data = data[data$prop_score > sub[1] & data$prop_score <= sub[2], ])
 
-sub3 <- glm(pct_vote ~ high_infrate, 
-            data = republican_data[republican_data$prop_score > sub[2] & republican_data$prop_score <= sub[3], ])
+sub3 <- glm(pct_vote_rep ~ treatment,
+            data = data[data$prop_score > sub[2] & data$prop_score <= sub[3], ])
 
-sub4 <- glm(pct_vote ~ high_infrate, 
-            data = republican_data[republican_data$prop_score > sub[3] & republican_data$prop_score <= sub[4], ])
+sub4 <- glm(pct_vote_rep ~ treatment,
+            data = data[data$prop_score > sub[3] & data$prop_score <= sub[4], ])
 
-sub5 <- glm(pct_vote ~ high_infrate, 
-            data = republican_data[republican_data$prop_score > sub[4], ])
+sub5 <- glm(pct_vote_rep ~ treatment,
+            data = data[data$prop_score > sub[4], ])
 
 # Extracting the necessary information from each model
 extract_info <- function(model, quantile) {
   coef_summary <- summary(model)$coefficients
-  data.frame(
+  data <- data.frame(
     quantile = quantile,
-    ce = coef_summary["high_infrate", "Estimate"],
-    p_val = coef_summary["high_infrate", "Pr(>|t|)"]
+    ce = coef_summary["treatment", "Estimate"],
+    p_val = coef_summary["treatment", "Pr(>|t|)"]
   )
+  return(data)
 }
 
 # Creating data frames for each model
@@ -331,10 +411,10 @@ df4 <- extract_info(sub4, "60-80%")
 df5 <- extract_info(sub5, "80-100%")
 
 # Combining all data frames into one
-rbind(df1, df2, df3, df4, df5) %>% 
+rbind(df1, df2, df3, df4, df5) %>%
   rename(`PS Quantile` = quantile,
          `Estimated CE` = ce,
-         `P Value` = p_val) %>% 
+         `P Value` = p_val) %>%
   kable()
 ```
 
@@ -342,13 +422,14 @@ rbind(df1, df2, df3, df4, df5) %>%
 #| echo: false
 #| message: false
 # Propensity score regression adjustment
-model_adj <- glm(pct_vote ~ treatment + prop_score, data = republican_data)
-# summary(model_adj)
+model_adj <- glm(change_vote_rep ~ treatment + prop_score, data = data)
+summary(model_adj)
 ```
 
 ```{r}
 #| echo: false
 #| message: false
+#| eval: false
 # Counterfactual Analysis
 adjusted_data <- data %>% 
   dplyr::select(state, county, fips, party, votes, total_votes, pct_vote, high_infrate)
@@ -382,6 +463,7 @@ adjusted_data %>%
 ```{r}
 #| echo: false
 #| message: false
+#| eval: false
 adjust_function2 <- function(data) {
   adjust_votes <- numeric(nrow(data))  # Initialize the vector with the correct length
   extra_vote_percentage <- 0.036928
