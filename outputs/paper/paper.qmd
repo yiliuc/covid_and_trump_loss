@@ -338,6 +338,21 @@ highinf_model <- glm(treatment ~ prop_higher_education + pctile +
 data$prop_score <- predict(highinf_model, type = "response")
 ```
 
+```{r}
+data <- read.csv(here("outputs/data/merged_data.csv"))
+
+library(MatchIt)
+m.out <- matchit(treatment ~ prop_higher_education + pctile + 
+                       no_insurance + private_insurance + males +
+                       white_pct + black_pct,
+                 data = data,
+                 distance = "logit",
+                 method = "nearest",
+                 replace = FALSE,
+                 ratio = 1)
+summary(m.out, standardize = TRUE)
+```
+
 ```{=tex}
 \begin{align*}
 \text{Logit}(\text{PS}) &= -2.008 + \\
@@ -367,6 +382,10 @@ library(Matching)
 rr <- Match(Y = data$pct_vote_rep, Tr = data$treatment, 
             X = data$prop_score, M = 1)
 summary(rr)
+```
+
+```{r}
+
 ```
 
 ```{r}
