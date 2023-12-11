@@ -45,6 +45,13 @@ data <- read.csv(here("outputs/data/merged_data.csv"))
 
 # Data
 
+The data used in this paper comprised five data sets from three different sources corresponding to different topics. The primary source is MIT Election Data Science Club which build open online data collections of the US Federal or Senate Election results, spanning from nation to county levels. The data extracted is called "County Presidential Election Returns 2000-2020" with about 70,000 rows containing the voting patterns for each candidate and party by county since 2000. Besides that, the data also indicate the types of voting, such as "EARLY VOTE" and "ELECTION DAY," for the same party in the a county. To analyze the voting patterns for Donald J. Trump, I only select the data for 2016 and 2020 US Federal Election for all counties and parties. Thus the filterd data set contains the number of votes through various ways for each county and party.
+
+In addition to that, the study also uses the data regarding COVID-19 from the Center for Systems Science and Engineering at Johns Hopkins University
+
+
+
+
 In this paper, the data used mainly consists of the voting patterns for the 2020 US Federal Election, COVID infection rate and socioeconomic variables in each county of the US. The voting data is taken from the MIT Election Data Science Lab, including voting for each party at the county level at each Federal Election from 2000 to 2020. The COVID data is from the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University. The socioeconomic data is taken from the American Community Survey.
 
 ## MIT Election Data Science Lab
