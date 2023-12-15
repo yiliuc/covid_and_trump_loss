@@ -328,6 +328,8 @@
 10003,"New Castle","DE",13451,373
 10005,"Sussex","DE",8255,248
 90010,"Unassigned","DE",91,0
+88888,"",NA,49,0
+11001,"District of Columbia","DC",17524,647
 12001,"Alachua","FL",10842,78
 12003,"Baker","FL",1819,24
 12005,"Bay","FL",6979,135
@@ -557,6 +559,8 @@
 13317,"Wilkes","GA",349,7
 13319,"Wilkinson","GA",391,17
 13321,"Worth","GA",678,36
+99999,"",NA,103,3
+66,"",NA,4812,80
 15001,"Hawaii","HI",1311,31
 15003,"Honolulu","HI",13321,170
 15007,"Kauai","HI",67,0
@@ -1244,6 +1248,7 @@
 25001,"Barnstable","MA",2065,164
 25003,"Berkshire","MA",808,44
 25005,"Bristol","MA",13010,649
+NA,"Dukes and Nantucket",NA,266,2
 25009,"Essex","MA",24724,1201
 25011,"Franklin","MA",487,52
 25013,"Hampden","MA",10523,711
@@ -1278,6 +1283,7 @@
 26043,"Dickinson","MI",833,21
 26045,"Eaton","MI",1390,12
 26047,"Emmet","MI",422,5
+NA,"Federal Correctional Institution (FCI)",NA,197,5
 26049,"Genesee","MI",7712,347
 26051,"Gladwin","MI",260,3
 26053,"Gogebic","MI",488,14
@@ -1309,6 +1315,7 @@
 26105,"Mason","MI",318,3
 26107,"Mecosta","MI",681,4
 26109,"Menominee","MI",821,7
+NA,"Michigan Department of Corrections (MDOC)",NA,7061,75
 26111,"Midland","MI",1311,14
 26113,"Missaukee","MI",120,1
 26115,"Monroe","MI",2341,44
@@ -1561,6 +1568,7 @@
 29097,"Jasper","MO",5625,77
 29099,"Jefferson","MO",6239,90
 29101,"Johnson","MO",1626,10
+NA,"Kansas City",NA,15738,222
 29103,"Knox","MO",70,1
 29105,"Laclede","MO",1284,23
 29107,"Lafayette","MO",953,26
@@ -2080,6 +2088,7 @@
 38101,"Ward","ND",3976,56
 38103,"Wells","ND",226,1
 38105,"Williams","ND",2188,18
+69,"",NA,96,2
 39001,"Adams","OH",290,8
 39003,"Allen","OH",2715,77
 39005,"Ashland","OH",529,17
@@ -2353,6 +2362,87 @@
 42129,"Westmoreland","PA",4759,109
 42131,"Wyoming","PA",188,8
 42133,"York","PA",6932,208
+72001,"Adjuntas",NA,203,0
+72003,"Aguada",NA,472,0
+72005,"Aguadilla",NA,667,0
+72007,"Aguas Buenas",NA,418,0
+72009,"Aibonito",NA,223,0
+72011,"Anasco",NA,321,0
+72013,"Arecibo",NA,1164,0
+72015,"Arroyo",NA,213,0
+72017,"Barceloneta",NA,343,0
+72019,"Barranquitas",NA,653,0
+72021,"Bayamon",NA,5258,0
+72023,"Cabo Rojo",NA,557,0
+72025,"Caguas",NA,2391,0
+72027,"Camuy",NA,426,0
+72029,"Canovanas",NA,981,0
+72031,"Carolina",NA,4318,0
+72033,"Catano",NA,651,0
+72035,"Cayey",NA,556,0
+72037,"Ceiba",NA,211,0
+72039,"Ciales",NA,367,0
+72041,"Cidra",NA,464,0
+72043,"Coamo",NA,447,0
+72045,"Comerio",NA,314,0
+72047,"Corozal",NA,937,0
+72049,"Culebra",NA,23,0
+72051,"Dorado",NA,1197,0
+72053,"Fajardo",NA,776,0
+72054,"Florida",NA,410,0
+72055,"Guanica",NA,179,0
+72057,"Guayama",NA,394,0
+72059,"Guayanilla",NA,273,0
+72061,"Guaynabo",NA,2443,0
+72063,"Gurabo",NA,818,0
+72065,"Hatillo",NA,466,0
+72067,"Hormigueros",NA,227,0
+72069,"Humacao",NA,840,0
+72071,"Isabela",NA,419,0
+72073,"Jayuya",NA,301,0
+72075,"Juana Diaz",NA,481,0
+72077,"Juncos",NA,627,0
+72079,"Lajas",NA,227,0
+72081,"Lares",NA,483,0
+72083,"Las Marias",NA,131,0
+72085,"Las Piedras",NA,736,0
+72087,"Loiza",NA,399,0
+72089,"Luquillo",NA,346,0
+72091,"Manati",NA,801,0
+72093,"Maricao",NA,97,0
+72095,"Maunabo",NA,177,0
+72097,"Mayaguez",NA,1047,0
+72099,"Moca",NA,509,0
+72101,"Morovis",NA,644,0
+72103,"Naguabo",NA,405,0
+72105,"Naranjito",NA,881,0
+72107,"Orocovis",NA,444,0
+72888,"Out of PR",NA,804,0
+72109,"Patillas",NA,217,0
+72111,"Penuelas",NA,165,0
+72113,"Ponce",NA,1361,0
+72115,"Quebradillas",NA,291,0
+72117,"Rincon",NA,246,0
+72119,"Rio Grande",NA,909,0
+72121,"Sabana Grande",NA,247,0
+72123,"Salinas",NA,585,0
+72125,"San German",NA,348,0
+72127,"San Juan",NA,10953,0
+72129,"San Lorenzo",NA,756,0
+72131,"San Sebastian",NA,816,0
+72133,"Santa Isabel",NA,293,0
+72135,"Toa Alta",NA,1885,0
+72137,"Toa Baja",NA,2122,0
+72139,"Trujillo Alto",NA,1687,0
+72999,"Unassigned",NA,1376,842
+72141,"Utuado",NA,289,0
+72143,"Vega Alta",NA,1039,0
+72145,"Vega Baja",NA,1293,0
+72147,"Vieques",NA,107,0
+72149,"Villalba",NA,280,0
+72151,"Yabucoa",NA,499,0
+72153,"Yauco",NA,619,0
+NA,"",NA,0,0
 44001,"Bristol","RI",558,19
 44003,"Kent","RI",2566,121
 44005,"Newport","RI",678,10
@@ -2825,14 +2915,20 @@
 48503,"Young","TX",684,11
 48505,"Zapata","TX",384,9
 48507,"Zavala","TX",514,19
+NA,"Bear River",NA,5721,19
+NA,"Central Utah",NA,1443,11
 49011,"Davis","UT",9266,43
 49035,"Salt Lake","UT",51124,316
 49037,"San Juan","UT",847,30
+NA,"Southeast Utah",NA,606,6
+NA,"Southwest Utah",NA,6741,57
 49043,"Summit","UT",1547,1
 49045,"Tooele","UT",1635,5
+NA,"TriCounty",NA,597,3
 90049,"Unassigned","UT",0,0
 49049,"Utah","UT",31095,84
 49051,"Wasatch","UT",1259,9
+NA,"Weber-Morgan",NA,7494,36
 50001,"Addison","VT",125,2
 50003,"Bennington","VT",142,1
 50005,"Caledonia","VT",48,0
@@ -2848,6 +2944,7 @@
 50023,"Washington","VT",138,2
 50025,"Windham","VT",154,3
 50027,"Windsor","VT",128,2
+78,"",NA,1385,22
 51001,"Accomack","VA",1229,19
 51003,"Albemarle","VA",1619,24
 51510,"Alexandria","VA",4377,74
