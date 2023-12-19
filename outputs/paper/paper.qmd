@@ -1,11 +1,11 @@
 ---
-title: "An Observational Study to COVID-19 and 2020 US Presidential Election: Counties with High Deaths per Case Rate Showed Diminished Support For Trump"
+title: "COVID-19 and the 2020 US Presidential Election: Counties with Extra COVID-19 Deaths Showed Less Support For Trump"
 title-block-banner: true
 author: "Yiliu Cao"
-thanks: "Code and data from this analysis are available at: https://github.com/yiliuc/covid_and_trump_loss.git"
+thanks: "Code and data from this analysis are available at: https://github.com/yiliuc/covid_and_trump_loss"
 date: "today"
 date-format: "long"
-abstract: "This study investigates the causal inference between COVID-19 and Donald Trump's loss during the 2020 US Federal Election using the data from MIT Election Data Science Lab and Johns Hopkins University CSSE. The main methodology used in this paper is propensity score matching with an exploratory analysis of the optimal treatment. The key finding suggests that the counties with a death per case rate exceeding the 0.4 quantile threshold show a reduced voting preference for Trump. This paper also conducts a counterfactual analysis based on the treatment effect, indicating that Trump might have been secured to re-elect if the disparities in death per case rates were addressed. Future research should refine the propensity score calculations by incorporating additional variables, such as the winning party in each county during the 2016 election."
+abstract: "This study investigates the relationship between COVID-19 and Donald Trump's loss during the 2020 US Federal Election using the data from MIT Election Data Science Lab and Johns Hopkins University CSSE. The main methodology used in this paper is propensity score matching with an exploratory analysis of the optimal treatment. The key finding is that counties with a death per case rate exceeding the 0.4 quantile threshold show a reduced voting preference for Trump. This paper also conducts a counterfactual analysis based on the treatment effect, indicating that Trump might have been re-elected if the disparities of extra deaths were addressed. Future research should incorporate the neighborhood effects on voting between different counties, and validate the causal inference used."
 format: pdf
 toc: true
 number-sections: true
@@ -29,6 +29,8 @@ library(gridExtra)
 library(tools)
 library(dplyr)
 library(ggplot2)
+library(Matching)
+library(kableExtra)
 ```
 
 ```{r}
@@ -44,27 +46,27 @@ data <- read.csv(here("outputs/data/merged_data.csv"))
 
 # Introduction
  
-In early 2020, the United States encountered its first cases of COVID-19. The situation escalated rapidly, with reported cases reaching 10,000 by March 19 and soaring to 100,000 just eight days later [@WikiCOVIDUSA2023]. Amidst this unfolding crisis, the U.S. Presidential Election was underway, ending with Trump's defeat to Biden. By Election Day on November 3, there were more than 9 million reported cases and about 200,000 deaths in the U.S. When talking about Trump's loss, the public refers to his mishandling of "his greatest test" [@Greenblatt2021] and believes that his win in the 2016 Election was a historical accident [@Bryant2020]. Conversely, some arguments suggest that COVID-19 was not the sole or decisive factor in Trump's defeat; his limits as a political strategy and wasting his advantage on the economy also contributed to his loss. This paper will investigate the causal effect between COVID and Trump's loss, and if so, to what extent it influenced the 2020 election outcome.
+In early 2020, the United States encountered its first cases of COVID-19. The situation escalated rapidly, with reported cases reaching 10,000 by March 19 and soaring to 100,000 just eight days later [@WikiCOVIDUSA2023]. Amidst this unfolding crisis, the U.S. Presidential Election was underway, ending with Trump's defeat to Biden. By Election Day on November 3, there were more than nine million reported cases and about 200,000 deaths in the U.S. When talking about Trump's loss, the public refers to his mishandling of "his greatest test" [@Greenblatt2021] and believes that his win in the 2016 Election was a historical accident [@Bryant2020]. Conversely, some arguments suggest that COVID-19 was not the sole or decisive factor in Trump's defeat; his limits as a political strategy and wasting his advantage on the economy also contributed to his loss. This paper will investigate the causal effect between COVID and Trump's loss, and if so, to what extent it influenced the 2020 election outcome.
 
-Existing research on this subject provides varied perspectives. Baccini et al. [@Baccini2021CovidElection] suggested that Trump could win without COVID, but simply using the COVID-19 infection rate as the only factor contributing to his loss would be too naive. Socio-economic factors like high education attainment and race diversity are also unignorable. Besides, their research emphasized the significant impact of COVID-19 on those urban areas where there were no stay-at-home orders, particularly for the "swing" states. In addition, Noland & Zhang [@NolandZhang2021] suggested that the deaths per case is a more crucial metric than the infection rate when analyzing the impact of COVID-19 on voting for Trump. However, they highlight the challenge in assessing COVID-19's impact on voting, as we may not know when the voters made their decisions. In contrast, Clarke et al. [@Clarke2021CovidTrump] conducted actual surveys before and after the election, suggesting that COVID-19 impacts voting but not the dominant one. The U.S.'s highly polarized political landscape might be more significant. Similarly, Hart [@Hart2021CovidTrump] also conducted a survey to ask about people's attitudes toward Trump. All the participants show natural or negative possession. They also find that some social movements like "Murder of George Floyd" may impact voting.
+Existing research on this subject provides varied perspectives. Baccini et al. [@Baccini2021CovidElection] suggested that Trump could win without COVID, but simply using the COVID-19 infection rate as the only factor contributing to his loss would be too naive. Socio-economic factors like high education attainment and race diversity are also unignorable. Besides, their research emphasized the significant impact of COVID-19 on those urban areas where there were no stay-at-home orders, particularly for the "swing" states. In addition, Noland and Zhang (2021) suggested that the deaths per case is a more crucial metric than the infection rate when analyzing the impact of COVID-19 on voting for Trump. However, they highlight the challenge in assessing COVID-19's impact on voting, as we may not know when the voters made their decision. In contrast, Clarke, Stewart, and Ho (2021) conducted surveys before and after the election, suggesting that COVID-19 impacts voting but not the dominant one. The U.S.'s polarized political landscape might be more significant. Similarly, Hart (2021) also conducted a survey to ask about people's attitudes toward Trump. All the participants show natural or negative possession. They also find that some social movements like "Murder of George Floyd" may impact voting.
 
-While all the above research investigated the correlation between COVID-19 and voting for Trump, previous studies predominantly employed models to identify variables influencing Trump's vote share and perform counterfactual analyses to estimate his voting performance in the absence of COVID-19 or reduction in deaths. Instead of using that method, this study employs propensity score matching to find the treatment effect and analyze whether counties more severely affected by COVID-19 exhibit distinct voting patterns. However, given all counties have experienced COVID-19, this paper will first find the optimal treatment group(s). Finally, I will conduct a counterfactual analysis to see if Trump could be re-elected with the treatment effect eliminated.
+While all the above research investigated the correlation between COVID-19 and voting for Trump, previous studies predominantly employed models to identify variables influencing Trump's vote share and perform counterfactual analyses to estimate his voting performance in the absence of COVID-19 or reduction in deaths. Instead of using that method, this study employs propensity score matching to find the treatment effect and analyze whether counties more severely affected by COVID-19 exhibit distinct voting patterns. However, given all counties have experienced COVID-19, this paper will first find the optimal treatment group(s). Finally,wewill conduct a counterfactual analysis to see if Trump could be re-elected with the treatment effect eliminated.
 
-This paper will have five parts. I will introduce the data used in this paper and present data summaries and visualization in the @sec-data part. After that, I will explain the methods in this paper and the corresponding results in the @sec-methods and @sec-results parts, respectively. All the results will be interpreted and discussed in the @sec-discussion part, and I will conclude with limitations and drawbacks in the @sec-conclusion part.
+This paper will have five parts.wewill introduce the data used in this paper and present data summaries and visualization in the @sec-data. After that,wewill explain the methods in this paper and the corresponding results in the @sec-methods and @sec-results, respectively. All the results will be interpreted and discussed in the @sec-discussion, andwewill conclude with limitations and drawbacks in the @sec-conclusion.
 
 # Data{#sec-data}
 
-The data in this paper is either downloaded directly or accessed via API. `R` [@R] will be the computer language used in the paper. Moreover, this paper will also use different R packages. The data is cleaned using the package `dplyr` [@dplyr], `stringr` [@stringr], `tidyverse` [@tidyverse], `janiotr` [@janitor], `tools` [@tools] and `tidyr` [@tidyr]. In addition to that, `ggplot2` [@ggplot2], `RColorBrewer` [@RColorBrewer], `maps` [@maps], `mapdata` [@mapdata], `gridExtra` [@gridExtra] and `cowplot` [@cowplot] will be used later to make tables and plot graphs. Besides, to perform Propensity Score Matching, this paper will also employ `Matching` [@Matching].
+The data in this paper is either downloaded directly or accessed via API. `R` [@R] will be the computer language used in the paper. The data is cleaned using the package `dplyr` [@dplyr], `stringr` [@stringr], `tidyverse` [@tidyverse], `janiotr` [@janitor], `tools` [@R] and `tidyr` [@tidyr]. In addition to that, `ggplot2` [@ggplot2], `RColorBrewer` [@RColorBrewer], `maps` [@maps], `mapdata` [@mapdata], `gridExtra` [@gridExtra] and `cowplot` [@cowplot] will be used later to make tables and plot graphs. To perform propensity score matching, this paper will also employ `Matching` [@Matching].
 
 ## Data sources
 
-This paper comprised five data sets from three different sources, each corresponding to different topics. The primary data is from the MIT Election Data Science Club [@MITElectionLab], which builds open online data collections of the U.S. Federal or Senate Election results from national to county levels. The data extracted is called "County Presidential Election Returns 2000-2020," [@MITElectionData2022] with about 70,000 rows containing the voting patterns for each candidate and party by county since 2000. Besides that, the data also indicate the types of voting, such as "EARLY VOTE" and "ELECTION DAY." To analyze the voting patterns for Donald J. Trump, I only filter the 2020 U.S. Federal Election data for all counties and parties.
+This paper comprised five data sets from three different sources, each corresponding to different topics. The primary data is from the MIT Election Data Science Club [@MITElectionLab], which builds open online data collections of the U.S. Federal or Senate Election results from national to county levels. The data extracted is called "County Presidential Election Returns 2000-2020," [@MITElectionData2022] with about 70,000 rows containing the voting patterns for each candidate and party by county since 2000. Besides that, the data also indicate the types of voting, such as "EARLY VOTE" and "ELECTION DAY." To analyze the voting patterns for Trump,weonly filter the 2020 U.S. Federal Election data for all counties and parties.
 
 Additionally, the data on COVID-19 is taken from the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University [@jhu]. CSSE collects and reports local, national, and global multidimensional data, including medicine, health care, disaster response, etc. During the pandemic, they collected the U.S. and international COVID cases and deaths, reporting them by daily summary on their GitHub [@CSSECOVID19Data]. To examine the impact of COVID-19 on the 2020 Election as accurately as possible, this paper used the daily report on November 3, 2020, which is the election day of the 2020 U.S. Federal Election. The resulting data include the aggregate number of cases, deaths and recovers before Election Day and the incidence rate and case-fatality ratio for each county.
 
-This paper also incorporates the socioeconomic data from the American Community Survey (ACS) [@acs], which is an online open-source database conducted by the U.S. Census Bureau, containing the various socioeconomic factors at different geographic levels. The data sets extracted from ACS are 2020 five-year estimates of DP02, DP03 and DP05, covering the social, economic and demographic characteristics at the county level. Since there are thousands of variables, to ensure simplicity, I will only use the variables that are found to be significant in predicting the COVID-19 mortality rate from my previous paper [@CaoCOVID19Repo]. The descriptions of all variables can be found on @tbl-descriptions.
+This paper also incorporates the socioeconomic data from the American Community Survey (ACS) [@acs], which is an online open-source database conducted by the U.S. Census Bureau, containing the various socioeconomic factors at different geographic levels. The data sets extracted from ACS are 2020 five-year estimates of DP02, DP03 and DP05, covering the social, economic and demographic characteristics at the county level. Since there are thousands of variables, to ensure simplicity,wewill only use the variables that are found to be significant in predicting the COVID-19 mortality rate from my previous paper [@CaoCOVID19Repo]. The descriptions of all variables can be found on @tbl-descriptions.
 
-After having five data sets, they are merged into one big data by county. Using the merged data, I calculate the percentage of votes for each party (candidate) in the 2020 election. In addition, I also create new dummy variables indicating the winning party in both elections for each county. Moreover, to accurately compare the COVID cases and deaths across all counties, I transform the number of cases and deaths to infection and mortality rate by 10,000 citizens in each county. Using the conclusion from Noland & Zhang's work [@NolandZhang2021], I also calculate each county's deaths per case rate. The final data consists of 3107 rows with 36 columns. All the essential variables are described in @tbl-descriptions.
+The five data sets are merged into one big data by county. Using the merged data,wecalculate the percentage of votes for each party (candidate) in the 2020 election. In addition,wealso create new dummy variables indicating the winning party in both elections for each county. Moreover, to accurately compare the COVID cases and deaths across all counties,wetransform the number of cases and deaths to infection and mortality rate by 10,000 citizens in each county. Using the conclusion from Noland & Zhang's work [@NolandZhang2021],wealso calculate each county's deaths per case rate. The final data consists of 3107 rows with 36 columns. All the essential variables are described in @tbl-descriptions.
 
 ```{r}
 #| tbl-cap: Descriptions of all important variables in the analyze data
@@ -102,19 +104,19 @@ data.frame(var = c("income_pctile", "prop_high_education", "private_insurance",
 data %>% 
   group_by(winning_party) %>% 
   summarise(n = n(),
-            case = mean(cases),
-            inf = mean(infrate),
-            deaths = mean(deaths),
-            mort = mean(mortrate),
-            dpc = mean(dpc),
-            income = mean(mean_household_income)) %>% 
+            case = round(mean(cases), 0),
+            inf = round(mean(infrate), 0),
+            deaths = round(mean(deaths), 0),
+            mort = round(mean(mortrate), 0),
+            dpc = round(mean(dpc), 0),
+            income = round(mean(mean_household_income), 0)) %>% 
   rename(`Winning Party` = winning_party,
          `Count` = n,
          `Average Cases` = case,
          `Infection Rate` = inf,
          `Average Deaths` = deaths,
          `Mortality Rate` = mort,
-         `DPC` = dpc,
+         `Death per Case (DPC)` = dpc,
          `Income` = income) %>% 
   kable(booktabs = TRUE)
 ```
@@ -156,7 +158,7 @@ merged_data <- county_clean %>%
 #| fig.width: 8 
 #| fig.height: 8
 #| label: fig-map
-#| fig-cap: The ratio of votes for the Republican and the infection rate per 100k in each county
+#| fig-cap: The ratio of Republican votes and the death per case (DPC) rate in each county
 
 p1 <- ggplot(data = merged_data, aes(x = long, y = lat, group = group)) + 
   geom_polygon(aes(fill = pct_vote_rep), color = "black") +
@@ -293,7 +295,6 @@ Given the insights from @tbl-covid and @fig-map, @fig-dpc-income delves deeper i
 
 In addition, despite the average share of votes for Republicans being consistently above 0.5, it does not imply a universal loss for Democrats across all counties. As detailed in @tbl-covid, we know that the number of counties won by Republicans is approximately five times greater than those won by Democrats. With Republicans dominating more counties, they naturally have a higher average share of votes. This pattern also indicates that Democrats usually won the densely populated, urban areas, but Republicans won in more sparsely populated and rural regions [@Spencer2023ElectionFactCheck]. The high population density areas have more votes, which explains why Biden beat Trump. We can verify this from the right side where the number of votes for Biden exceeds Trump as DPC and income level increases. This pattern is particularly pronounced in the wealthiest top 50% of counties and those with DPCs exceeding the 75th percentile.
 
-
 ```{r}
 #| fig-cap: The correlation between DPC rate with proportons of people with private insurance and without health insurance for the two parties
 #| label: fig-insurance
@@ -372,7 +373,7 @@ print(combined_plot_with_legend)
 
 @fig-bar compares the ratio of the White population (race diversity) and education levels for the two parties. Interestingly, it suggests that counties with higher racial diversity are less likely to vote for Biden, as opposed to the trend observed for Republican-leaning counties, where increased diversity aligns with increased support. This pattern implies that counties that predominantly vote for Democrats have a higher proportion of White residents. This may explain why they have relatively higher income levels. In terms of the ratio of people with high education attainment, since the average vote for Republicans is always higher than for Democrats, this may indicate that more educated people are likely to vote for Trump.
 
-# Methods{#sec-meethods}
+# Methods{#sec-methods}
 
 This paper aims to conduct the causal inference between COVID-19 and Trump's loss in 2020. The primary method implemented in this study will be the Propensity Score Matching (PSM). After finding the causal inference, this paper will also conduct a counterfactual analysis to see whether Trump can re-elect without COVID-19.
 
@@ -380,36 +381,39 @@ This paper aims to conduct the causal inference between COVID-19 and Trump's los
 
 The treatment refers to the intervention or exposure being studied to understand its potential impact on the outcome [@WikiPropensity2023a]. In other words, we implement specific interventions for a group of people but not for the rest. The group of people receiving the treatment is called the treatment group, and the control group for the rest. For instance, Austin [@Austin2011PropensityScore] examined the effectiveness of a new medical treatment called clampless off-pump coronary artery bypass (clampless OPCAB) to see if it can reduce the in-hospital mortality rate compared to the traditional method. Here, 'treatment' refers to the new surgical procedure, and patients who took this new surgery are the treatment group. They compared the mortality rates between the two groups and concluded that the new treatment could statistically lower the stroke and mortality rate.
 
-Typically, the treatment should be defined before conducting the analysis, and this aims to reduce the risk of p-hacking [@Frost2023PHacking]. However, given the objective of this paper, which is to find whether COVID-19 influenced Trump's loss in the last Election, pre-defining the treatment is challenging as all U.S. counties were affected by COVID-19. Therefore, this study begins with exploratory analysis to identify the treatment group exhibiting the most significant differences in voting patterns for Trump. I will establish specific cutoffs for classifying counties as having 'high' or 'low' death per case rates (DPC). In addition, from @fig-dpc-income, low and high-income counties also seem to have different voting behaviours. Therefore, both DPC and income will be considered when choosing the optimal treatment.
+Typically, the treatment should be defined before conducting the analysis, and this aims to reduce the risk of p-hacking [@Frost2023PHacking]. However, given the objective of this paper, which is to find whether COVID-19 influenced Trump's loss in the last Election, pre-defining the treatment is challenging as all U.S. counties were affected by COVID-19. Therefore, this study begins with exploratory analysis to identify the treatment group exhibiting the most significant differences in voting patterns for Trump.wewill establish specific cutoffs for classifying counties as having 'high' or 'low' death per case rates (DPC). In addition, from @fig-dpc-income, low and high-income counties also seem to have different voting behaviours. Therefore, both DPC and income will be considered when choosing the optimal treatment.
 
 Nevertheless, choosing cutoffs is critical, and we need to avoid p-hacking or data dredging risks. P-hacking means the manipulation of data analysis until we can find statistically significant results [@Frost2023PHacking]. If we simply choose one cutoff and see the significant results that match common sense, it may raise the p-hacking risk, and the analyses will be less convincing. Therefore, we will employ a grid of cutoffs for each variable, examining how treatment effects vary. For example, one treatment group can be counties with death per case and income levels higher than 0.3 quantiles. In this way, we should be able to find the optimal treatment group and avoid the risk of p-hacking.
 
 ## Propensity Score Matching (PSM)
 
-Randomized controlled trials (RCT) are regarded as the most ideal and the golden way to estimate the treatment effect [@Kuss2016PropensityScore]. The reason is that RCTs are the only way that guarantee the equal distribution of known and unknown parameters. Therefore, the outcomes between the treatment and control groups will not be confounded. However, conducting an RCT is nearly impractical and impossible in many scenarios. Back to the coronary artery bypass example [@Austin2011PropensityScore], it's not ethically feasible to randomly assign patients to new or traditional treatments. Hence, conducting an RCT is nearly impossible. 
+Randomized controlled trials (RCT) are regarded as the most ideal way to estimate the treatment effect [@Kuss2016PropensityScore]. The reason is that RCTs are the only way that guarantee the equal distribution of known and unknown parameters. Therefore, the outcomes between the treatment and control groups will not be confounded. However, conducting an RCT is difficult in many scenarios. Back to the coronary artery bypass example [@Austin2011PropensityScore], it's not ethically feasible to randomly assign patients to new or traditional treatments. Hence, conducting an RCT is nearly impossible. 
 
-In such situations, implementing Propensity Score Matching (PSM) can be a more practical way to find the treatment effects. The propensity score is the probability of an observation that receives the treatment based on the existing covariates using logistic regression. Using propensity scores can reduce the dimension [@Zhao2021PropensityR], meaning that we can describe an observation to a single score instead of multiple covariates. In addition, another significant advantage of PSM is design separation [@Zhao2021PropensityR], meaning that PSM can separate the covariates balancing and effects estimation. This is especially beneficial as we can observe from @fig-insurance that the distribution of counties with relatively high DPC rates is imbalanced. Finally, we can match two observations having similar propensity scores but from treatment and control groups separately. Then, we will have many matched pairs and estimate the treatment effects. The matching process is called propensity score matching.
+In such situations, implementing Propensity Score Matching (PSM) can be a more practical way to find the treatment effects. The propensity score is the probability an observation would have been treated based on the existing covariates using logistic regression. Using propensity scores reduces the dimension [@Zhao2021PropensityR], meaning that we can describe an observation to a single score instead of multiple covariates. Another significant advantage of PSM is design separation [@Zhao2021PropensityR], meaning that PSM can separate the covariates balancing and effects estimation. This is especially beneficial as we can observe from @fig-insurance that the distribution of counties with relatively high DPC rates is imbalanced. Finally, we can match two observations with similar propensity scores, but from treatment and control groups, separately. Then, we will have many matched pairs and estimate the treatment effect. The matching process is called propensity score matching.
 
-In this paper, the propensity scores are used to estimate how likely a county is to receive treatment using multiple linear logistic regression. The equation will look like:
+In this paper, propensity scores are used to estimate how likely a county is to receive treatment using multiple linear logistic regression. The equation is:
 
-```{=tex}
-\begin{align*}
-\log\left(\frac{P(T=1|X)}{1 - P(T=1|X)}\right) = \beta_0 + \beta_1 X_1 +\cdots +\beta_p X_p
-\end{align*}
-```
-where:\
-* $P(T=1|X)$ is the probability of a county receiving treatment\
-* $X_j\:(1\leq j\leq p)$ are the covariates\
+$$
+\begin{aligned}
+\mbox{Pr}(y_i = 1) = & \text{logit}^{-1}(\beta_0 + \beta_1 \times \text{prop\_higher\_education}\\
+& + \beta_2 \times \text{income\_pctile} + \beta_3 \times \text{no\_insurance} \\
+& + \beta_4 \times \text{private\_insurance} + \beta_5 \times \text{males} \\
+& + \beta_6 \times \text{white\_pct} + \beta_7 \times \text{black\_pct})
+\end{aligned}
+$$
+where:
+
+* $\mbox{Pr}(y_i = 1)$ is the probability that a county has a "High" DPC rate
 * $\beta_0$ is the intercept
-* $\beta_j\:(1\leq j\leq p)$ is the corresponding coefficients of each covariate\
+* $\beta_j\:(1\leq j\leq 7)$ is the corresponding coefficients for seven predictors
 
 ## Counterfactual Analysis
 
 Using the PSM described previously, we can find the treatment effects under different treatment group settings. However, to conclude whether Trump lost due to COVID-19, we need to perform a counterfactual analysis by re-calculating the votes for Trump in counties in the treatment group.
 
-The counterfactual analysis is particularly necessary for those "swing" states in 2020 [@WikiSwingState2023b]. In the 2016 Federal Election, one key factor in Trump's defeat of Hillary is that he won seven out of eleven swing states. However, he only won three in 2020. Besides, if Donald Trump were able to hold onto three swing states which are Georgia, Arizona and Wisconsin, where the average margin of Democrats is only about 0.3%, the result would have been a 269-269 electoral tie decided in the House of Representatives. The presidential election is left up to members of the House of Representatives, and Trump could win.
+The counterfactual analysis is particularly necessary for those "swing" states in 2020 [@WikiSwingState2023b]. In the 2016 Election, Trump won seven out of eleven swing states. However, he only won three in 2020. If Trump had been able to hold onto three swing states Georgia, Arizona and Wisconsin where the average margin of Democrats is only about 0.3%, the result would have been a 269-269 electoral tie. The presidential election is left up to members of the House of Representatives, and Trump could win.
 
-To find the voting patterns for Trump, especially for the "swing" states, I will follow the official election procedure and use the winners-takes-all rule [@WikiWinnerTakeAll2023c]. That said, I will re-calculate the votes for Trump at the county level and summarize by state level. Then, the party with the highest total votes will take all the electoral votes in this state. Eventually, I will calculate the total electoral votes for each party to see whether Trump could re-elect if the treatment effects diminish.
+To find the voting patterns for Trump, especially for the "swing" states, we will follow the official election procedure and use the winners-takes-all rule [@WikiWinnerTakeAll2023c]. That said, we will re-calculate the votes for Trump at the county level and summarize by state level. Then, the party with the highest total votes will take all the electoral votes in this state. Eventually, we will calculate the total electoral votes for each party to see whether Trump could re-elect if the treatment effects diminish.
 
 # Results{#sec-results}
 
@@ -529,9 +533,9 @@ ggdraw() +
 
 @fig-income shows the correlation between Trump's vote share and the DPC rate but this time dividing counties based on income levels into "High Income" and "Low Income" groups. Each subplot in this analysis corresponds to a different income cutoff. Compared to @fig-dpc, all curves, regardless of the cutoff, display a linear or near-linear relationship with voting patterns. As the income cutoff increases, the difference in voting behaviour between the high and low-income counties becomes more distinct, especially at the 0.9 cutoff. This suggests that in counties with higher incomes, voting patterns vary significantly from those in lower-income counties as the DPC rate changes. Therefore, the most significant pattern is observed at the 0.9 income cutoff, contradicting the patterns identified in @fig-dpc.
 
-So, a question may arise regarding whether we should include all the income and DPC in the settings of treatment. The answer is NO, and we should only include the DPC. From @fig-dpc, a consistent quadratic relationship between income and voting patterns for Trump is evident regardless of how the cutoff for defining high DPC is adjusted. This pattern demonstrates that poorer counties (in the first half of the income spectrum) may show a positive or a negative correlation with voting for Trump depending on the cutoff we choose. In contrast, more affluent counties will only exhibit a negative correlation no matter which cutoff we choose. This quadratic pattern can be verified from @fig-dpc-income, which illustrates a similar relationship between votes and income.
+A question may arise regarding whether we should include all the income and DPC in the settings of treatment. We include only the DPC. Because, from @fig-dpc, a consistent quadratic relationship between income and voting patterns for Trump is evident regardless of how the cutoff for defining high DPC is adjusted. This pattern demonstrates that poorer counties (in the first half of the income spectrum) may show a positive or a negative correlation with voting for Trump depending on the cutoff we choose. In contrast, more affluent counties will only exhibit a negative correlation no matter which cutoff we choose. This quadratic pattern can be verified from @fig-dpc-income, which illustrates a similar relationship between votes and income.
 
-Conversely, @fig-income presents a different narrative. All regression lines, irrespective of the DPC cutoff, display a linear or nearly linear relationship. We should exclude income because the choice of cutoff will significantly change the treatment effects; DPC is more "stable" than income. We can verify this from @fig-income, where each line shows a negative slope, meaning that the choice of cutoff for the "High DPC" group will not change the general voting patterns for Trump. Hence, including income would introduce extra variability in the treatment effects and increase the probability of p-hacking. The @fig-treatment shows a simple visualization of why this is the case.
+Conversely, @fig-income presents a different narrative. All regression lines, irrespective of the DPC cutoff, display a linear or nearly linear relationship. We should exclude income because the choice of cutoff will significantly change the treatment effects; DPC is more "stable" than income. We can verify this from @fig-income, where each line shows a negative slope, meaning that the choice of cutoff for the "High DPC" group will not change the general voting patterns for Trump. Hence, including income would introduce extra variability in the treatment effects and increase the probability of p-hacking.
 
 ```{r}
 #| fig-width: 8
@@ -615,7 +619,7 @@ From @fig-dpc, we have determined that a cutoff at the 0.4 quantile is the most 
 
 ## Propensity Score Matching
 
-In my previous paper, I already showed that the proportion of residents with at least a bachelor's degree, income, the proportion of people with private insurance and without health insurance, the ratio of males, ratio of black and black residents are statistically in predicting the probability of a county has a high mortality rate or not. In this paper, I will directly use the results and only consider these variables when predicting the propensity scores.
+Cao (2023) already showed that the proportion of residents with at least a bachelor's degree, income, the proportion of people with private insurance and without health insurance, the ratio of males, ratio of black and black residents are statistically in predicting the probability of a county has a high mortality rate or not. Here,we will directly use the results and only consider these variables when predicting the propensity scores.
 
 ```{=tex}
 \begin{align*}
@@ -640,8 +644,6 @@ The above equation shows the logistic regression model to predict the propensity
 #| label: tbl-psm
 
 library(dplyr)
-data <- read.csv(here("outputs/data/merged_data.csv"))
-
 data_te <- data %>% 
   mutate(high_dpc = ifelse(dpc > quantile(dpc, 0.4), 1, 0),
          high_income = ifelse(mean_household_income > quantile(mean_household_income, 0.9), 1, 0),
@@ -651,19 +653,35 @@ highinf_model <- glm(treatment ~ prop_higher_education  + pctile +
                        white_pct + black_pct, family = binomial(),
                       data = data_te)
 data_te$prop_score <- predict(highinf_model, type = "response")
-
-library(Matching)
-library(kableExtra)
-# Propensity score matching
 rr <- Match(Y = data_te$pct_vote_rep, Tr = data_te$treatment,
             X = data_te$prop_score, M = 1)
+# summary(rr)
+extract_match_summary <- function(rr) {
+    summary_output <- capture.output(summary(rr))
+    estimate <- as.numeric(sub("Estimate...\\s*(-?\\d+\\.?\\d*e?-?\\d*)", "\\1", summary_output[2]))
+    p_value <- round(as.numeric(sub("p.val......\\s*(\\d+\\.?\\d*e?-?\\d*)", "\\1", summary_output[5])), 4)
+    original_num_obs <- as.numeric(sub("Original number of observations..............\\s*(\\d+)", "\\1", summary_output[7]))
+    original_num_treated <- as.numeric(sub("Original number of treated obs...............\\s*(\\d+)", "\\1", summary_output[8]))
+    matched_num_obs <- as.numeric(sub("Matched number of observations...............\\s*(\\d+)", "\\1", summary_output[9]))
+    matched_num_obs_unweighted <- as.numeric(sub("Matched number of observations  \\(unweighted\\).\\s*(\\d+)", "\\1", summary_output[10]))
+    return(list(
+        estimate = estimate,
+        p = p_value,
+        on = original_num_obs,
+        ot = original_num_treated,
+        mo = matched_num_obs,
+        mou = matched_num_obs_unweighted
+    ))
+}
 
-data.frame(estimate = -0.018342,
-           p = 0.021404,
-           on = 3115,
-           ot = 1869,
-           mo=1869,
-           mou = 5415) %>% 
+result <- extract_match_summary(rr)
+
+data.frame(estimate = result$estimate,
+           p = result$p,
+           on = result$on,
+           ot = result$ot,
+           mo = result$mo,
+           mou = result$mou) %>% 
   rename(`Treatment Effect` = estimate,
          `P value` = p,
          `Obs.` = on,
@@ -683,6 +701,10 @@ data.frame(estimate = -0.018342,
 # Load necessary libraries
 library(knitr)
 library(kableExtra)
+
+# mb  <- MatchBalance(treatment ~ prop_higher_education  + pctile +
+#                        no_insurance + private_insurance + males +
+#                        white_pct + black_pct, data=data_te, match.out=rr, nboots=10)
 
 # Prepare your data
 data.frame(
@@ -707,7 +729,7 @@ data.frame(
 ## Counterfactual Analysis
 
 ```{r}
-#| tbl-cap: The summary of counterfactual votes for the eleven swing staes in 2020
+#| tbl-cap: The summary of counterfactual votes for the eleven swing states in 2020
 #| label: tbl-counter
 electoral_votes_state <- read.csv(here("outputs/data/electoral_votes_state.csv"))
 swing_states_2020 <- c("FL", "PA", "MI", "WI", "AZ", "NC", "GA", "IA", "NV", "MN", "NH")
@@ -759,18 +781,257 @@ data_counter %>%
 
 @tbl-counter provides a comparative summary of the actual and counterfactual voting results in eleven swing states during the 2020 U.S. Presidential election. In reality, Trump only won three swing states with 232 electoral votes. However, the counterfactual analysis suggests that Trump would have won five additional states if the DPC rate disparities were eliminated, bringing him an extra 52 electoral votes. This would bring his total to 284 electoral votes, surpassing the required 270-vote threshold for reelection. Therefore, if Trump can eliminate the extra deaths, he could be re-elected.
 
+```{r}
+#| include: false
+library(dplyr)
+data <- read.csv(here("outputs/data/merged_data.csv"))
+
+data_te <- data %>% 
+  filter(dpc > quantile(dpc, 0.4)) %>% 
+  mutate(rep_won20 = ifelse(pct_vote_rep > pct_vote_demo, 1, 0),
+         demo_won20 = ifelse(pct_vote_rep < pct_vote_demo, 1, 0)) %>% 
+  mutate(treatment = rep_won20)
+
+highinf_model <- glm(treatment ~ prop_higher_education  + pctile +
+                       no_insurance + private_insurance + males +
+                       white_pct + black_pct, family = binomial(),
+                      data = data_te)
+data_te$prop_score <- predict(highinf_model, type = "response")
+
+library(Matching)
+library(kableExtra)
+# Propensity score matching
+rr <- Match(Y = data_te$pct_vote_rep, Tr = data_te$treatment,
+            X = data_te$prop_score, M = 1)
+summary(rr)
+```
+
 
 # Discussion{#sec-discussion}
 
-## First discussion point {#sec-first-point}
+## Defining the treatment is the most crucial part in this study
+In an observational study, especially for conducting the causal inference, the treatment should always be settled before the analysis as it is effective to reduce the risk of p-hacking. If we want to focus whether the COVID-19 has generally influenced the voting for Trump compared to 2016, then we can take the voting for each county on both 2016 and 2020 and the treatment would simply be whether this county had COVID-19. However, this paper aims to investigate whether the extra COVID-19 death during the pandemic has influenced the voting for Trump. As all the U.S. counties had experienced COVID-19, it is necessary to manually define the cutoff of "high" extra COVID-19 deaths. Therefore, this study starts with an exploratory analysis in finding the optimal treatment group.
 
-## Second discussion point
+From @tbl-covid and @fig-dpc-income, it seems that a county's COVID death per case rate (DPC) and income levels are the two factors that are most related to the voting for Trump. Therefore the treatment will only incorporate these two factors. However, even though the main objective in defining the cutoff is to maximize the difference between the treatment and control group, we can observe from @fig-dpc and @fig-income that the effect of income on the voting for Trump is highly dependent on the choice of cutoff as it appears a quadratic relationship. A quadratic pattern is not desired as different cutoffs will bring large differences on the treatment effects. The two groups may even show opposite relation (see @fig-treatment) or the same sign but with a high cutoff. However, unlike the income, DPC shows a general cubic relationship to vote of Trump and hence the choice of cutoff will not generate huge different treatment effects. We can verify this from @fig-income where no matter how the cutoff of "high" income changes, there will always have a linear or at least a closely linear relationship between them. The change of cutoff will not bring so dramatic change of treatment effects (see @fig-treatment). Furthermore, we can observe that the "high" and "low" DPC rate counties behave most differently with a cutoff at 0.4 quantile in @fig-income, therefore the optimal treatment group is counties with a DPC rate higher than the 0.4 quantile.
 
-## Third discussion point
+```{r}
+#| label: tbl-income
+# show TE with different income levels
+generate_rr_summaries <- function(data, cutoffs, treatment_var) {
+  rr_list <- list()
+  for (cutoff in cutoffs) {
+    data_te <- data %>%
+      mutate(high_dpc = ifelse(dpc > quantile(dpc, cutoff), 1, 0),
+             high_income = ifelse(mean_household_income > quantile(mean_household_income, cutoff), 1, 0))
+    data_te$treatment <- data_te[[treatment_var]]
+    if (treatment_var == "high_income"){
+      highinf_model <- glm(treatment ~ prop_higher_education +
+                           no_insurance + private_insurance + males +
+                           white_pct + black_pct, family = binomial(), data = data_te)
+    }
+    else{
+      highinf_model <- glm(treatment ~ prop_higher_education + pctile +
+                           no_insurance + private_insurance + males +
+                           white_pct + black_pct, family = binomial(), data = data_te)
+    }
+    data_te$prop_score <- predict(highinf_model, type = "response")
+    rr <- Match(Y = data_te$pct_vote_rep, Tr = data_te$treatment, X = data_te$prop_score, M = 1)
+    rr_list[[as.character(cutoff)]] <- rr
+  }
+  summaries <- list()
+  
+  for (cutoff in names(rr_list)) {
+    summaries[[cutoff]] <- extract_match_summary(rr_list[[cutoff]])
+  }
+  
+  return(summaries)
+}
+cutoffs <- seq(0.1, 0.9, by = 0.1)
 
-## Weaknesses and next steps
+summaries_income <- generate_rr_summaries(data, cutoffs, "high_income")
+summaries_dpc <- generate_rr_summaries(data, cutoffs, "high_dpc")
+
+extract_data_from_summaries <- function(summaries) {
+  estimates_list <- list()
+  p_values_list <- list()
+  original_num_obs_list <- list()
+  original_num_treated_list <- list()
+  matched_num_obs_list <- list()
+  matched_num_obs_unweighted_list <- list()
+
+  # Extract variables for each summary into the respective lists
+  for (cutoff in names(summaries)) {
+      estimates_list[cutoff] <- summaries[[cutoff]]$estimate
+      p_values_list[cutoff] <- summaries[[cutoff]]$p
+      original_num_obs_list[cutoff] <- summaries[[cutoff]]$on
+      original_num_treated_list[cutoff] <- summaries[[cutoff]]$ot
+      matched_num_obs_list[cutoff] <- summaries[[cutoff]]$mo
+      matched_num_obs_unweighted_list[cutoff] <- summaries[[cutoff]]$mou
+  }
+
+  # Create a data frame from the lists
+  return(data.frame(
+    cutoffs = c("0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"),
+    estimate = unname(unlist(estimates_list)),
+    p = unname(unlist(p_values_list)),
+    on = unname(unlist(original_num_obs_list)),
+    ot = unname(unlist(original_num_treated_list)),
+    mo = unname(unlist(matched_num_obs_list)),
+    mou = unname(unlist(matched_num_obs_unweighted_list))
+  ))
+}
+
+df_income <- extract_data_from_summaries(summaries_income)
+df_dpc <- extract_data_from_summaries(summaries_dpc)
+df_income %>% 
+  rename(`Cutoffs` = cutoffs,
+       `Treatment Effect` = estimate,
+       `P value` = p,
+       `Obs.` = on,
+       `Treat. Obs.` = ot,
+       `Treat. Obs` = mo,
+       `Treat. Obs. Unw.` = mou) %>% 
+kable(booktabs = TRUE) %>% 
+add_header_above(c(" " = 3,
+                   "Original" = 2, "Matched" = 2))
+```
+
+```{r}
+#| label: tbl-dpc
+df_dpc %>% 
+  rename(`Cutoffs` = cutoffs,
+       `Treatment Effect` = estimate,
+       `P value` = p,
+       `Obs.` = on,
+       `Treat. Obs.` = ot,
+       `Treat. Obs` = mo,
+       `Treat. Obs. Unw.` = mou) %>% 
+kable(booktabs = TRUE) %>% 
+add_header_above(c(" " = 3,
+                   "Original" = 2, "Matched" = 2))
+```
+To verify our conclusions, @tbl-income and @tbl-dpc compare the treatment effects for income and DPC at different cutoffs. The treatment effects for income is not stable at different cutoffs as it increases as the cutoff increases gradually. The cutoff 0.9 may even result in a positive effect. Conversely, the treatment effect for DPC at different cutoffs behaves more stable, where all values are negative and around -0.01. In addition, even though the optimal cutoff we found, 0.4, is not the maximum one, it is only one that is statistically significant given the 0.05 significance level. By the way, there should have no issues of p-hacking as the intial way to choose the cutoff is to via the interaction between the income and dpc.
+
+
+## The COVID-19 and Trump's voting behaviours {#sec-first-point} Trump's lost can not simply blame on COVID but COVID indeed increase the uncertainty
+
+Throughout American history, Donald Trump is a very personalized president and make him unique compared other presidents in US. He was the first person to be elected President of the United States without any previous experience in either political office or military service, but also the first president that had been impeached twice. Through his presidency, Trump made many incredible accomplishments. US had the "Unprecedented Economic Boom", which seven million new jobs were created and the unemployment rate was the lowest in a half century. However, the have been constant accusations against him. Trump is the only US president that had been impeached twice during the presidency, given the total four times of impeachment in U.S. history. The first impeachment was in 2019 which he had solicited foreign countries to interference the 2020 Election and another one is during his last time of presidency, which he had incited the attack to the U.S. Capitol. However, the most criticized thing against to him is his mis-management of COVID-19 during 2020 and significantly affect his voting for 2020 Election. 
+
+The candidates, especially the incumbent president, are always be blamed or credited on the national economy and direction. But 2020 Election was a quite different one because the voters need to carefully consider an extra variable "COVID-19" [citation] when they make their decisions. The majority of existing researches indicate that Trump was criticized more than praised due to the COVID-19, meaning that people seems to only focus on the COVID-19 and ignore the positive things that Trump made. In this paper, @tbl-psm and @tbl-counter shows that the counties with deaths higher than 0.4 quantile have significant less vote for Trump, and Trump can win extra five swing states if he can diminish the inequality. However, even though we did not incorporate income into treatment group, we can not ignore its impacts on the voting for Trump as show on @fig-dpc-income. The riches counties indeed vote less for Trump.
+
+In fact, if we compare the 2016 and 2020 election, we can observe that income is a crucial factor explaining why Trump lost. @fig-compare compares the voting pattern for the counties with extra deaths with cutoff 0.4 quantile in both 2016 and 2020 across different income levels. It is clear that the impact of extra death on voting for Trump is enornoumous on those richer counties. Specifically, in 2016, the cutoff of counties that start to increase their support to Democrat is about 75th percentile. However, this value shrinks to about 60th percentile, meaning that share of votes for richer counties increases compared to 2016. Conversely, even though the Republican took a higher share of votes in 2020, it decreases dramatically as income level increases. We can verify this from the number of votes for the two parties. The mean votes for Trump in 2020 stays very close to 2016 but the gap of votes for Democrat between 2020 and 2016 gets higher and higher as income levels increases. Furthermore, this pattern also prove that there were more voters in 2020 compared to 2016, but unfortunately, they all vote for Biden.
+
+```{r}
+#| fig-cap: The comparision of Trump's voting behavior of counties with extra COVID-19 death in 2016 and 2020 Election
+#| label: fig-compare
+#| message: false
+
+library(dplyr)
+library(tidyr)
+
+data1620 <- data %>% 
+  filter(dpc > quantile(dpc, 0.4)) %>% 
+  dplyr::select(fips, pct_vote_demo, pct_vote_demo16,
+                pct_vote_rep, pct_vote_rep16, vote_demo, vote_demo16,
+                vote_rep, vote_rep16)
+  
+long_data_pct <- data1620 %>% 
+  pivot_longer(
+    cols = matches("pct_"),
+    names_to = c("party", "year"),
+    names_pattern = "pct_(.+)(..)$",
+    values_to = "vote_pct"
+  ) %>%
+  mutate(year = ifelse(year == "16", "2016", "2020"),
+         party = ifelse(grepl("de", party), "Democrat", "Republican")) %>% 
+  dplyr::select(fips, party, year, vote_pct)
+
+long_data_votes <- data1620 %>%
+  pivot_longer(
+    cols = matches("^vote_"),
+    names_to = c("party", "year"),
+    names_pattern = "vote_(.+)(..)$",
+    values_to = "actual_votes"
+  ) %>%
+  mutate(year = ifelse(year == "16", "2016", "2020"),
+         party = ifelse(grepl("de", party), "Democrat", "Republican")) %>% 
+  dplyr::select(fips, party, year, actual_votes)
+
+# Combine both datasets
+combined_data <- left_join(long_data_pct, long_data_votes, by = c("fips", "year", "party"))
+
+# Determine the Winning Party with both vote percentage and actual votes
+final_data <- combined_data %>%
+  group_by(fips, year) %>%
+  slice_max(vote_pct, n = 1, with_ties = FALSE) %>%
+  ungroup() %>% 
+  left_join(data, by = "fips") %>% 
+  dplyr::select(fips, mean_household_income, vote_pct, actual_votes, party, year)
+
+p1 <- final_data %>% 
+  mutate(income_pctile = ntile(mean_household_income, 100)) %>% 
+  ggplot(aes(x = income_pctile, y = vote_pct, colour = party, linetype = as.factor(year))) +
+  geom_smooth(se = FALSE) +
+  scale_linetype_manual(values = c("2016" = "twodash", "2020" = "solid")) +
+  scale_color_manual(values = c("Democrat" = "#9999FF", "Republican" = "#FF9999"),
+                     name = "Winning Party") +
+  labs(title = "Vote Percentage vs Income Percentile",
+       x = "Income Percentile",
+       y = "Votes Share(%)",
+       linetype = "Year") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p2 <- final_data %>% 
+  mutate(income_pctile = ntile(mean_household_income, 100)) %>% 
+  ggplot(aes(x = income_pctile, y = actual_votes, colour = party, linetype = as.factor(year))) +
+  geom_smooth(se = FALSE) +
+  scale_linetype_manual(values = c("2016" = "twodash", "2020" = "solid")) +
+  scale_color_manual(values = c("Democrat" = "#9999FF", "Republican" = "#FF9999"),
+                     name = "Party") +
+  labs(title = "Vote Percentage vs Income Percentile",
+       x = "Income Percentile",
+       y = "Number of Votes",
+       linetype = "Year") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+library(cowplot)
+legend <- get_legend(p1 + theme(legend.position = "bottom"))
+combined_plot <- plot_grid(p1, p2, nrow = 1)
+combined_plot_legend <- plot_grid(combined_plot, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+print(combined_plot_legend)
+```
+
+Even though we did not incorporate income into treatment, the losing confidence from richer counties are still unignorable. 书是必然的不管有没有covid
+
+need to focus on state level
+
+## Anticipations of 2024 Election
+One year ago on November 8, 2022, the 2022 United States Election which is also the Midterm Election was held. All seats of U.S. House of Representatives and 35 seats of 100 was contested to determine the new Congress [citation]. Historically, people will have a relatively low support for the incumbent president and hence the incumbent president's party will lose a notable number of seats. However, even though the Republican had overperformance at traditonal Democrat state such as California and New York, the expected Red Wave was not appeared, with that the Republican only took nine more seats in the Lower House. This may not a good news for Trump and his party as in 2018 Midterm Election, the expected "Blue Wave" appears with Democrat taking 45 seats from the Republican. Even though COVID was not ended in US, it seems that the decreasing impact of COVID-19 did not bring an expected increase in support for Trump, especially the swing states as we predicted in @tbl-counter.
+
+However, one year later on November 5, 2024, the 2024 Presidential Election will be held and the new President will be elected. Joe Biden was already nominated by the Democrat and announced his reelection bid [citation]. For the Republican party, even though no one has been nominated yet, Donald Trump is far ahead of his challengers within the party [citation], meaning that that the same scene in 2020 will be highly likely to happen again in 2024. However, the latest approval rating on Dec 16, 2023 indicates that up to 56% American disapprove the president Biden, which is the near lowest level of his presidency [citation]. However, the support for Trump is also not optimistic, where only 42% American have favorable opinion on him.
+
+Taking the insights from this paper, it seems that Trump is at least more likely to win the 2024 Federal Election as COVID-19 will not longer be a variable that the voters need to consider.  However, this paper only illustrate in the perspective of causal inference instead of forecasting. To have the accurate predictions of popular votes for Biden and Trump, other techniques like Multilevel with Post-stratification is more suitable.
+
+
+This paper use the methods of propensity score matching to conduct causal inference detect whether there is a relationship between high death per cases rate and voting for Trump.
+
+
+if there is a Yes or No question asking whether COVID-19 has negative impact on Trump's voting patterns in 2020, then the answer is Yes. However, regarding whether Trump lost because of COVID, the answer is Uncertain.
+
+## Limitations and Future Work
+This paper exploratorily analyze the optimal treatment group and then find the treatment effects using the Propensity Score Matching, as well as a counterfactual analysis. However, this paper still have several limitations. The data used in this paper are collected from different sources with different geographic levels. For Alaska, MIT Election Data Science Club used the census region whereas both ACS and JHU CSSE used different districts. Therefore, the data of Alaska is excluded in this research. However, since there is only about 10 census regions in Alaska, the exclusion of these data will not significantly influence the accuracy of the analysis.
+
+Another limitation in this paper is that the number of covariates considered to find the propensity scores may be over-simplified. The covariates considered in the paper are the significant factors in predicting the COVID-19 mortality rate from taken the previous research [@CaoCOVID19Repo]. The way to calculate the propensity scores should be more complicate such as adding more predictors or interaction terms. A more complicated model can make the predictions of propensity score more accurate and hence the matching process will be more comprehensive. The resulting treatment effect is more close to the real one. Additionally, the way to conduct the counterfactual analysis is to add the percent of votes from treatment effects directly from Democrat to Republican. This might be too punished as there are some other parties which also gain lots of votes, such as Libertarian. Decrease the votes proportionally might be more appropriate.
+
+The future works should focus more on the neighborhood effect in voting behavior. Harrop et al. [citation] argues that neighborhood impacts is a good indicator and they are distributed by the political discussion and local party activity. In addition, Ron et al. [citation] suggest that the economic factors of communities or counties is most significant related to the voting preferences. They also concluded that the similar voters living in different areas will vote for different parties. The future works should incorporate neighborhood effect into the research. The potential procedure could be to find the treatment effect of high DPC for low and high income counties. The future research should also consider the historical voting preference for each county, like those traditionally Republican-counties will not have a hugh increase or decrease in there votes for Trump no matter how the DPC changes. Furthermore, the future research should also focus on how to validate the causal inference. Parikh et al. [citation] introduced a new deep generative model called "Credence" to evaluate the performance of different methods. The future research should take a similar way to find the best methods.
+
+
 
 # Conclusion{#sec-conclusion}
+
 
 \newpage
 
