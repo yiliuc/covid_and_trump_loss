@@ -171,8 +171,8 @@ election_data_2016_clean <- election_data_2016 %>%
   group_by(state, county, fips, party, total_votes) %>%
   summarise(votes = sum(votes), .groups = 'drop') %>%
   pivot_wider(names_from = party, values_from = votes) %>% 
-  mutate(vote_demo = Democrat,
-         vote_rep = Republican,
+  mutate(vote_demo16 = Democrat,
+         vote_rep16 = Republican,
          vote_other = Other,
          pct_vote_demo16 = Democrat/total_votes,
          pct_vote_rep16 = Republican/total_votes,
@@ -180,8 +180,8 @@ election_data_2016_clean <- election_data_2016 %>%
                 ~replace(., is.na(.), 0)),
          rep_won16 = ifelse(pct_vote_rep16 > pct_vote_demo16, 1, 0),
          demo_won16 = ifelse(pct_vote_rep16 < pct_vote_demo16, 1, 0)) %>% 
-  dplyr::select(state, county, fips, pct_vote_demo16, pct_vote_rep16, rep_won16,
-                demo_won16)
+  dplyr::select(state, county, fips, pct_vote_demo16, pct_vote_rep16, vote_demo16,
+                vote_rep16, rep_won16, demo_won16)
 
 ## elction_data_clean combines the election data for 2016 and 2020
 election_data_clean <- election_data_2020_clean %>% 
