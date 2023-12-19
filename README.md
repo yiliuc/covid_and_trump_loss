@@ -1,16 +1,16 @@
-# Starter folder
+# An Observational Study to COVID-19 and 2020 US Presidential Election: Counties with High Deaths per Case Rate Showed Diminished Support For Trump
 
 ## Overview
 
-This repo provides students with a foundation for their own projects associated with *Telling Stories with Data*. You do not need every aspect for every paper and you should delete aspects that you do not need.
+This paper uses the 2020 U.S. Election data from MIT Election Data Science Club, COVID-19 data from Center for Systems Science and Engineering at Johns Hopkins University and U.S. socio-economic data from American Community Survey (ACS), to find the relationship between extra COVID-19 deaths and voting for Trump in 2020. Specifically, we perform exploratory analysis to define the treatment and use the method of propensity score matching to find the treatment effects.
 
-To use this folder, click the green "Code" button", then "Download ZIP". Move the downloaded folder to where you want to work on your own computer, and then modify it to suit.
+Except the election data was downloaded directly from their website, all the data are extracted using API and stored at `inputs/data`. The output paper is in `outputs/paper/paper.pdf`.
 
 ## File Structure
 
 The repo is structured as:
 
--   `input/data` contains the data sources used in analysis including the raw data.
--   `outputs/data` contains the cleaned dataset that was constructed.
+-   `input/data` contains all the raw data in this paper.
+-   `outputs/data` contains the cleaned datasets
 -   `outputs/paper` contains the files used to generate the paper, including the Quarto document and reference bibliography file, as well as the PDF of the paper. 
 -   `scripts` contains the R scripts used to simulate, download and clean data.
