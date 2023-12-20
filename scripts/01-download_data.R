@@ -1,13 +1,10 @@
 #### Preamble ####
-# Purpose: Downloads and saves the data from ACS API
+# Purpose: Downloads and saves the data from ACS API and JHU CSSE
 # Author: Yiliu Cao
-# Date: 1 October 2023
+# Date: Dec 20 2023
 # Contact: yiliu.cao@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: None
-
-
-#### Workspace setup ####
 
 
 #### Download data ####
@@ -30,6 +27,9 @@ url_covid2 <- paste0(
   "01-20-2021.csv")
 
 covid_data <- read.csv(url_covid, header = TRUE, sep = ",")
+
+# The election data is downloaded directly from their website at 
+# https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/VOQCHQ
 
 #### Save data ####
 write.csv(DP02, "inputs/data/DP_02.csv", row.names = FALSE)
