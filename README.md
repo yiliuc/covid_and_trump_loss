@@ -1,4 +1,4 @@
-# An Observational Study to COVID-19 and 2020 US Presidential Election: Counties with High Deaths per Case Rate Showed Diminished Support For Trump
+# COVID-19 and the 2020 U.S. Presidential Election: Counties with Extra COVID-19 Deaths Showed Less Support For Trump
 
 ## Overview
 
