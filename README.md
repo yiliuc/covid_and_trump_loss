@@ -1,4 +1,4 @@
-# COVID-19 and the 2020 U.S. Presidential Election: Counties with Extra COVID-19 Deaths Showed Less Support For Trump
+# COVID-19 and the 2020 U.S. Presidential Election: Counties with Extra COVID-19 Deaths Showed Less Support For Trump (STA497)
 
 ## Overview
 
